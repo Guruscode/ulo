@@ -97,10 +97,10 @@ export default function Homepage() {
         onQuickTypeChange={setQuickType}
         onSearch={handleSearch}
       />
-      <RecommendationsCta />
+      {/* <RecommendationsCta /> */}
       <HeroServices />
       <HomeProperties allProperties={homeProperties} filteredProperties={filteredProperties} />
-      <RecommendedProperties properties={filteredProperties.length > 0 ? filteredProperties : homeProperties} />
+      {/* <RecommendedProperties properties={filteredProperties.length > 0 ? filteredProperties : homeProperties} /> */}
       <NeighbourhoodGuide />
       <EstateSection estates={homeEstates} />
       <HomeFooter />

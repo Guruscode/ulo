@@ -55,7 +55,7 @@ export default function RecommendationsCta() {
           <div className="relative">
             {/* Carousel */}
             <div className="overflow-hidden rounded-2xl">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-1">
                 {visibleProperties.map((property) => (
                   <Link key={property.id} href={`/properties/${property.id}`}>
                     <div className="group cursor-pointer">

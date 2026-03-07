@@ -11,7 +11,7 @@ export default function HomeNav() {
 
   const navItems = [
     { href: '/', label: 'Home', key: 'home' },
-    { href: '/buy', label: 'Property', key: 'property' },
+    { href: '/listings', label: 'Property', key: 'property' },
     { href: '/agents', label: 'Agents', key: 'agents' },
     { href: '/hotels', label: 'Hotels', key: 'hotels' },
     { href: '/pricing', label: 'Pricing', key: 'pricing' },
@@ -21,7 +21,7 @@ export default function HomeNav() {
   ]
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50">
+    <nav className="fixed top-0 left-0 right-0 z-50 mb-10">
       {/* Transparent gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-transparent h-20" />
       
