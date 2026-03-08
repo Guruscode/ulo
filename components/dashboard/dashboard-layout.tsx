@@ -21,6 +21,7 @@ import {
   Plus,
   Bell,
   Search,
+  CreditCard,
 } from 'lucide-react'
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
   { id: 'properties', label: 'Properties', icon: Home, href: '/dashboard/properties' },
   { id: 'hotels', label: 'Hotels', icon: Building2, href: '/dashboard/hotels' },
   { id: 'favorites', label: 'Saved', icon: Heart, href: '/dashboard/favorites' },
+  { id: 'subscriptions', label: 'Subscription', icon: CreditCard, href: '/dashboard/subscriptions' },
 ]
 
 const bottomNavItems = [

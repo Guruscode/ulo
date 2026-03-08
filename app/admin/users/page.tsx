@@ -53,6 +53,8 @@ import {
   Filter,
   LayoutGrid,
   LayoutList,
+  Ban,
+  CheckCircle,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -155,7 +157,9 @@ export default function AdminUsersPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [viewUser, setViewUser] = useState<User | null>(null)
   const [editUser, setEditUser] = useState<User | null>(null)
-  const [addUserOpen, setAddUserOpen] = useState(false)
+const [addUserOpen, setAddUserOpen] = useState(false)
+  const [blockUser, setBlockUser] = useState<User | null>(null)
+  const [activateUser, setActivateUser] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>(mockUsers)
   
   const [newUser, setNewUser] = useState<Partial<User>>({
@@ -202,7 +206,7 @@ export default function AdminUsersPage() {
     }
   }
 
-  const handleAddUser = () => {
+const handleAddUser = () => {
     if (newUser.name && newUser.email) {
       const user: User = {
         id: Date.now(),
@@ -225,6 +229,20 @@ export default function AdminUsersPage() {
         joinedDate: new Date().toISOString().split('T')[0],
       })
       setAddUserOpen(false)
+    }
+  }
+
+  const handleBlockUser = () => {
+    if (blockUser) {
+      setUsers(users.map(u => u.id === blockUser.id ? { ...u, status: 'inactive' as const } : u))
+      setBlockUser(null)
+    }
+  }
+
+  const handleActivateUser = () => {
+    if (activateUser) {
+      setUsers(users.map(u => u.id === activateUser.id ? { ...u, status: 'active' as const } : u))
+      setActivateUser(null)
     }
   }
 
@@ -403,7 +421,7 @@ export default function AdminUsersPage() {
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
+<DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem onClick={() => setViewUser(user)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
@@ -412,6 +430,18 @@ export default function AdminUsersPage() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {user.status === 'active' ? (
+                              <DropdownMenuItem onClick={() => setBlockUser(user)}>
+                                <Ban className="mr-2 h-4 w-4" />
+                                Block User
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => setActivateUser(user)}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Activate User
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => setDeleteId(user.id)}
@@ -742,7 +772,7 @@ export default function AdminUsersPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Delete Confirmation */}
+{/* Delete Confirmation */}
           {deleteId && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -767,6 +797,68 @@ export default function AdminUsersPage() {
                     className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                   >
                     Delete
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Block User Confirmation */}
+          {blockUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            >
+              <Card className="bg-white p-6 max-w-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Block User?</h3>
+                <p className="text-slate-600 mb-6">
+                  Are you sure you want to block <strong>{blockUser.name}</strong>? They will no longer be able to access the platform.
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setBlockUser(null)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleBlockUser}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Block User
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Activate User Confirmation */}
+          {activateUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            >
+              <Card className="bg-white p-6 max-w-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Activate User?</h3>
+                <p className="text-slate-600 mb-6">
+                  Are you sure you want to activate <strong>{activateUser.name}</strong>? They will regain full access to the platform.
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setActivateUser(null)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleActivateUser}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Activate User
                   </Button>
                 </div>
               </Card>

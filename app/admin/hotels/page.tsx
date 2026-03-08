@@ -57,6 +57,8 @@ import {
   Waves,
   Dumbbell,
   Utensils,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -175,7 +177,9 @@ export default function AdminHotelsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [viewHotel, setViewHotel] = useState<Hotel | null>(null)
   const [editHotel, setEditHotel] = useState<Hotel | null>(null)
-  const [addHotelOpen, setAddHotelOpen] = useState(false)
+const [addHotelOpen, setAddHotelOpen] = useState(false)
+  const [approveHotel, setApproveHotel] = useState<Hotel | null>(null)
+  const [rejectHotel, setRejectHotel] = useState<Hotel | null>(null)
   const [hotels, setHotels] = useState<Hotel[]>(mockHotels)
   
   const [newHotel, setNewHotel] = useState<Partial<Hotel>>({
@@ -254,7 +258,21 @@ export default function AdminHotelsPage() {
         rooms: 0,
         status: 'active',
       })
-      setAddHotelOpen(false)
+setAddHotelOpen(false)
+    }
+  }
+
+  const handleApproveHotel = () => {
+    if (approveHotel) {
+      setHotels(hotels.map(h => h.id === approveHotel.id ? { ...h, status: 'active' as const } : h))
+      setApproveHotel(null)
+    }
+  }
+
+  const handleRejectHotel = () => {
+    if (rejectHotel) {
+      setHotels(hotels.map(h => h.id === rejectHotel.id ? { ...h, status: 'inactive' as const } : h))
+      setRejectHotel(null)
     }
   }
 
@@ -438,7 +456,7 @@ export default function AdminHotelsPage() {
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
+<DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem onClick={() => setViewHotel(hotel)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
@@ -448,6 +466,19 @@ export default function AdminHotelsPage() {
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
+                            {hotel.status === 'pending' && (
+                              <>
+                                <DropdownMenuItem onClick={() => setApproveHotel(hotel)}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Approve
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setRejectHotel(hotel)}>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Reject
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
                             <DropdownMenuItem onClick={() => setDeleteId(hotel.id)} className="text-red-600 focus:text-red-600">
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
@@ -775,7 +806,7 @@ export default function AdminHotelsPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Delete Confirmation */}
+{/* Delete Confirmation */}
           {deleteId && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <Card className="bg-white p-6 max-w-sm">
@@ -784,6 +815,38 @@ export default function AdminHotelsPage() {
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setDeleteId(null)} className="flex-1">Cancel</Button>
                   <Button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-600 hover:bg-red-700 text-white">Delete</Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Approve Hotel Confirmation */}
+          {approveHotel && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <Card className="bg-white p-6 max-w-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Approve Hotel?</h3>
+                <p className="text-slate-600 mb-6">
+                  Are you sure you want to approve <strong>{approveHotel.name}</strong>? It will be published and visible to all users.
+                </p>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setApproveHotel(null)} className="flex-1">Cancel</Button>
+                  <Button onClick={handleApproveHotel} className="flex-1 bg-green-600 hover:bg-green-700 text-white">Approve</Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Reject Hotel Confirmation */}
+          {rejectHotel && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <Card className="bg-white p-6 max-w-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Reject Hotel?</h3>
+                <p className="text-slate-600 mb-6">
+                  Are you sure you want to reject <strong>{rejectHotel.name}</strong>? It will be marked as unavailable.
+                </p>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setRejectHotel(null)} className="flex-1">Cancel</Button>
+                  <Button onClick={handleRejectHotel} className="flex-1 bg-red-600 hover:bg-red-700 text-white">Reject</Button>
                 </div>
               </Card>
             </motion.div>

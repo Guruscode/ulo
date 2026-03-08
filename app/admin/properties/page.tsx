@@ -53,6 +53,8 @@ import {
   Square,
   DollarSign,
   Home,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -182,7 +184,9 @@ export default function AdminPropertiesPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [viewProperty, setViewProperty] = useState<Property | null>(null)
   const [editProperty, setEditProperty] = useState<Property | null>(null)
-  const [addPropertyOpen, setAddPropertyOpen] = useState(false)
+const [addPropertyOpen, setAddPropertyOpen] = useState(false)
+  const [approveProperty, setApproveProperty] = useState<Property | null>(null)
+  const [rejectProperty, setRejectProperty] = useState<Property | null>(null)
   const [properties, setProperties] = useState<Property[]>(mockProperties)
   
   const [newProperty, setNewProperty] = useState<Partial<Property>>({
@@ -262,7 +266,21 @@ export default function AdminPropertiesPage() {
         description: '',
         featured: false,
       })
-      setAddPropertyOpen(false)
+setAddPropertyOpen(false)
+    }
+  }
+
+  const handleApproveProperty = () => {
+    if (approveProperty) {
+      setProperties(properties.map(p => p.id === approveProperty.id ? { ...p, status: 'active' as const } : p))
+      setApproveProperty(null)
+    }
+  }
+
+  const handleRejectProperty = () => {
+    if (rejectProperty) {
+      setProperties(properties.map(p => p.id === rejectProperty.id ? { ...p, status: 'sold' as const } : p))
+      setRejectProperty(null)
     }
   }
 
@@ -448,7 +466,7 @@ export default function AdminPropertiesPage() {
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
+<DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem onClick={() => setViewProperty(property)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
@@ -458,6 +476,19 @@ export default function AdminPropertiesPage() {
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
+                            {property.status === 'pending' && (
+                              <>
+                                <DropdownMenuItem onClick={() => setApproveProperty(property)}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Approve
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setRejectProperty(property)}>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Reject
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
                             <DropdownMenuItem onClick={() => setDeleteId(property.id)} className="text-red-600 focus:text-red-600">
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
@@ -771,7 +802,7 @@ export default function AdminPropertiesPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Delete Confirmation */}
+{/* Delete Confirmation */}
           {deleteId && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <Card className="bg-white p-6 max-w-sm">
@@ -780,6 +811,38 @@ export default function AdminPropertiesPage() {
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setDeleteId(null)} className="flex-1">Cancel</Button>
                   <Button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-600 hover:bg-red-700 text-white">Delete</Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Approve Property Confirmation */}
+          {approveProperty && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <Card className="bg-white p-6 max-w-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Approve Property?</h3>
+                <p className="text-slate-600 mb-6">
+                  Are you sure you want to approve <strong>{approveProperty.title}</strong>? It will be published and visible to all users.
+                </p>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setApproveProperty(null)} className="flex-1">Cancel</Button>
+                  <Button onClick={handleApproveProperty} className="flex-1 bg-green-600 hover:bg-green-700 text-white">Approve</Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Reject Property Confirmation */}
+          {rejectProperty && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <Card className="bg-white p-6 max-w-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Reject Property?</h3>
+                <p className="text-slate-600 mb-6">
+                  Are you sure you want to reject <strong>{rejectProperty.title}</strong>? It will be marked as unavailable.
+                </p>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setRejectProperty(null)} className="flex-1">Cancel</Button>
+                  <Button onClick={handleRejectProperty} className="flex-1 bg-red-600 hover:bg-red-700 text-white">Reject</Button>
                 </div>
               </Card>
             </motion.div>

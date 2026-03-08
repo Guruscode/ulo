@@ -15,18 +15,21 @@
 - [x] Add search and filter functionality
 - [x] Include modals for add/edit/view/delete
 - [x] Add tooltips
+- [x] Add Block/Activate user functionality
 
 ## Phase 4: Properties Management
 - [x] Create /admin/properties page with full CRUD
 - [x] Add search and filter functionality
 - [x] Include modals for add/edit/view/delete
 - [x] Add tooltips
+- [x] Add Approve/Reject property functionality
 
 ## Phase 5: Hotels Management
 - [x] Create /admin/hotels page with full CRUD
 - [x] Add search and filter functionality
 - [x] Include modals for add/edit/view/delete
 - [x] Add tooltips
+- [x] Add Approve/Reject hotel functionality
 
 ## Phase 6: Blog Management
 - [x] Create /admin/blog page with full CRUD

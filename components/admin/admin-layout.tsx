@@ -26,16 +26,18 @@ import {
   MessageSquare,
   MapPin,
   Package,
+  CreditCard,
 } from 'lucide-react'
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const navItems = [
   { id: 'overview', label: 'Overview', icon: BarChart3, href: '/admin' },
   { id: 'users', label: 'Users', icon: Users, href: '/admin/users' },
-  { id: 'properties', label: 'Properties', icon: Home, href: '/admin/properties' },
+  { id: 'properties', label: ' Properties', icon: Home, href: '/admin/properties' },
   { id: 'hotels', label: 'Hotels', icon: Building2, href: '/admin/hotels' },
   { id: 'agents', label: 'Agents', icon: User, href: '/admin/agents' },
   { id: 'blog', label: 'Blog', icon: FileText, href: '/admin/blog' },
+  { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, href: '/admin/subscriptions' },
 ]
 
 const bottomNavItems = [
