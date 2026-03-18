@@ -9,13 +9,27 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ApiClientError } from '@/lib/client/api-error'
 import { accountRequest, updateAccountRequest, updatePasswordRequest } from '@/lib/client/account-client'
+import type { AccountType, IdentityType } from '@/lib/auth/types'
 
 type ProfileForm = {
   name: string
   email: string
   phone: string
+  address: string
+  state: string
+  localGovernment: string
+  accountType: AccountType
+  identityType: IdentityType | ''
+  identityNumber: string
   timezone: string
 }
 
@@ -23,6 +37,12 @@ const DEFAULT_PROFILE_FORM: ProfileForm = {
   name: '',
   email: '',
   phone: '',
+  address: '',
+  state: '',
+  localGovernment: '',
+  accountType: 'user',
+  identityType: '',
+  identityNumber: '',
   timezone: 'Africa/Lagos',
 }
 
@@ -59,6 +79,12 @@ export function AccountProfileContent({
           name: response.user.name || '',
           email: response.user.email || '',
           phone: response.user.phone || '',
+          address: response.user.address || '',
+          state: response.user.state || '',
+          localGovernment: response.user.localGovernment || '',
+          accountType: response.user.accountType || 'user',
+          identityType: response.user.identityType || '',
+          identityNumber: response.user.identityNumber || '',
           timezone: response.user.timezone || 'Africa/Lagos',
         })
         setAccountLoaded(true)
@@ -80,6 +106,11 @@ export function AccountProfileContent({
         name: profile.name,
         email: profile.email,
         phone: profile.phone,
+        address: profile.address,
+        state: profile.state,
+        localGovernment: profile.localGovernment,
+        identityType: profile.identityType || null,
+        identityNumber: profile.identityNumber,
         timezone: profile.timezone,
         emailNotifications: user?.emailNotifications ?? true,
         pushNotifications: user?.pushNotifications ?? false,
@@ -87,12 +118,18 @@ export function AccountProfileContent({
       })
 
       setUser(response.user)
-      setProfile({
-        name: response.user.name || '',
-        email: response.user.email || '',
-        phone: response.user.phone || '',
-        timezone: response.user.timezone || 'Africa/Lagos',
-      })
+        setProfile({
+          name: response.user.name || '',
+          email: response.user.email || '',
+          phone: response.user.phone || '',
+          address: response.user.address || '',
+          state: response.user.state || '',
+          localGovernment: response.user.localGovernment || '',
+          accountType: response.user.accountType || 'user',
+          identityType: response.user.identityType || '',
+          identityNumber: response.user.identityNumber || '',
+          timezone: response.user.timezone || 'Africa/Lagos',
+        })
       toast.success('Profile updated successfully.')
     } catch (error) {
       const message =
@@ -102,6 +139,8 @@ export function AccountProfileContent({
       setProfileSaving(false)
     }
   }
+
+  const requiresIdentity = profile.accountType !== 'user'
 
   const handleChangePassword = async () => {
     setPasswordSaving(true)
@@ -137,7 +176,7 @@ export function AccountProfileContent({
           </div>
           <div>
             <p className="text-lg font-semibold text-gray-900">{user?.name || 'Loading...'}</p>
-            <p className="text-gray-500">{roleLabel}</p>
+            <p className="text-gray-500">{roleLabel} • {profile.accountType.replace('_', ' ')}</p>
           </div>
         </div>
 
@@ -171,6 +210,39 @@ export function AccountProfileContent({
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="profile-account-type">Account Type</Label>
+            <Input
+              id="profile-account-type"
+              value={profile.accountType.replace('_', ' ')}
+              className="capitalize"
+              disabled
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="profile-address">House Address</Label>
+            <Input
+              id="profile-address"
+              value={profile.address}
+              onChange={(event) => setProfile({ ...profile, address: event.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-state">State</Label>
+            <Input
+              id="profile-state"
+              value={profile.state}
+              onChange={(event) => setProfile({ ...profile, state: event.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-local-government">Local Government</Label>
+            <Input
+              id="profile-local-government"
+              value={profile.localGovernment}
+              onChange={(event) => setProfile({ ...profile, localGovernment: event.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="profile-timezone">Timezone</Label>
             <Input
               id="profile-timezone"
@@ -178,6 +250,33 @@ export function AccountProfileContent({
               onChange={(event) => setProfile({ ...profile, timezone: event.target.value })}
             />
           </div>
+          {requiresIdentity ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="profile-identity-type">Identity Type</Label>
+                <Select
+                  value={profile.identityType || 'nin'}
+                  onValueChange={(value) => setProfile({ ...profile, identityType: value as IdentityType })}
+                >
+                  <SelectTrigger id="profile-identity-type">
+                    <SelectValue placeholder="Select identity type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nin">NIN</SelectItem>
+                    <SelectItem value="bvn">BVN</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-identity-number">Identity Number</Label>
+                <Input
+                  id="profile-identity-number"
+                  value={profile.identityNumber}
+                  onChange={(event) => setProfile({ ...profile, identityNumber: event.target.value })}
+                />
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className="mt-6 flex justify-end">

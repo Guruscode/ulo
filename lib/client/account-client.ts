@@ -11,6 +11,11 @@ export function updateAccountRequest(input: {
   name: string
   email: string
   phone?: string | null
+  address?: string | null
+  state?: string | null
+  localGovernment?: string | null
+  identityType?: 'nin' | 'bvn' | null
+  identityNumber?: string | null
   timezone: string
   emailNotifications: boolean
   pushNotifications: boolean

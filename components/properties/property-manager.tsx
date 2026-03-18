@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Eye, Loader2, Pencil, ShieldCheck, Trash2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -201,7 +202,6 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
   const [editingProperty, setEditingProperty] = useState<PropertyRecord | null>(null)
   const [openForm, setOpenForm] = useState(false)
   const [formStep, setFormStep] = useState(0)
-  const [subscriptionChoice, setSubscriptionChoice] = useState<'free' | 'basic' | 'premium'>('free')
   const [form, setForm] = useState<PropertyFormState>(EMPTY_FORM)
   const [actingPropertyId, setActingPropertyId] = useState<string | null>(null)
 
@@ -258,7 +258,6 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
     setEditingProperty(null)
     setForm(EMPTY_FORM)
     setFormStep(0)
-    setSubscriptionChoice('free')
   }
 
   const handleSubmit = async () => {
@@ -266,12 +265,23 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
 
     try {
       const payload = toRequestPayload(form)
+      const sanitizedPayload =
+        mode === 'admin'
+          ? payload
+          : {
+              ...payload,
+              status: 'active' as const,
+              verificationStatus: 'not_requested' as const,
+              disclaimerAccepted: true,
+              referenceCode: null,
+              featured: false,
+            }
 
       if (editingProperty) {
-        await updatePropertyRequest(editingProperty.id, payload)
+        await updatePropertyRequest(editingProperty.id, sanitizedPayload)
         toast.success(mode === 'admin' ? 'Property updated.' : 'Property updated and sent for review.')
       } else {
-        await createPropertyRequest(payload)
+        await createPropertyRequest(sanitizedPayload)
         toast.success(mode === 'admin' ? 'Property created.' : 'Property created and awaiting approval.')
       }
 
@@ -326,10 +336,15 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
       ? Boolean(form.title && form.location && form.fullAddress && form.type)
       : formStep === 1
         ? Boolean(form.priceValue && form.sqft && form.description)
-        : formStep === 2
-          ? form.imageUrls.every(Boolean) &&
-            Boolean(form.contactName && form.contactPhone && form.contactEmail && form.disclaimerAccepted)
-          : true
+      : formStep === 2
+        ? form.imageUrls.every(Boolean) &&
+          Boolean(
+            form.contactName &&
+              form.contactPhone &&
+              form.contactEmail &&
+              (mode === 'admin' ? form.disclaimerAccepted : true)
+          )
+        : true
 
   return (
     <div className="space-y-6">
@@ -580,17 +595,19 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Listing Status</Label>
-                <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as PropertyFormState['status'] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="sold">Sold</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {mode === 'admin' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="status">Listing Status</Label>
+                  <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as PropertyFormState['status'] })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <Label htmlFor="bedrooms">Bedrooms</Label>
                 <Input id="bedrooms" type="number" value={form.bedrooms} onChange={(event) => setForm({ ...form, bedrooms: event.target.value })} />
@@ -619,17 +636,19 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 <Label htmlFor="features">Features</Label>
                 <Textarea id="features" rows={4} value={form.features} onChange={(event) => setForm({ ...form, features: event.target.value })} placeholder="Pool, Gym, Security, Parking" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="verificationStatus">Verification Status</Label>
-                <Select value={form.verificationStatus} onValueChange={(value) => setForm({ ...form, verificationStatus: value as PropertyFormState['verificationStatus'] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not_requested">Not requested</SelectItem>
-                    <SelectItem value="requested">Requested</SelectItem>
-                    <SelectItem value="verified">Verified</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {mode === 'admin' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="verificationStatus">Verification Status</Label>
+                  <Select value={form.verificationStatus} onValueChange={(value) => setForm({ ...form, verificationStatus: value as PropertyFormState['verificationStatus'] })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="not_requested">Not requested</SelectItem>
+                      <SelectItem value="requested">Requested</SelectItem>
+                      <SelectItem value="verified">Verified</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
               {mode === 'admin' ? (
                 <div className="flex items-center justify-between rounded-lg border px-4 py-3">
                   <div>
@@ -665,10 +684,12 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                   <Label htmlFor="videoUrl">Neighbourhood / Tour Video URL</Label>
                   <Input id="videoUrl" value={form.videoUrl} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="referenceCode">Reference Code</Label>
-                  <Input id="referenceCode" value={form.referenceCode} onChange={(event) => setForm({ ...form, referenceCode: event.target.value })} />
-                </div>
+                {mode === 'admin' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="referenceCode">Reference Code</Label>
+                    <Input id="referenceCode" value={form.referenceCode} onChange={(event) => setForm({ ...form, referenceCode: event.target.value })} />
+                  </div>
+                ) : null}
                 <div className="space-y-2">
                   <Label htmlFor="contactName">Contact Name</Label>
                   <Input id="contactName" value={form.contactName} onChange={(event) => setForm({ ...form, contactName: event.target.value })} />
@@ -686,13 +707,19 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                   <Input id="documentInfo" value={form.documentInfo} onChange={(event) => setForm({ ...form, documentInfo: event.target.value })} />
                 </div>
               </div>
-              <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-                <div>
-                  <p className="font-medium text-gray-900">Disclaimer Accepted</p>
-                  <p className="text-sm text-gray-500">Confirm the platform disclaimer before submission.</p>
+              {mode === 'admin' ? (
+                <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                  <div>
+                    <p className="font-medium text-gray-900">Disclaimer Accepted</p>
+                    <p className="text-sm text-gray-500">Confirm the platform disclaimer before submission.</p>
+                  </div>
+                  <Switch checked={form.disclaimerAccepted} onCheckedChange={(checked) => setForm({ ...form, disclaimerAccepted: checked })} />
                 </div>
-                <Switch checked={form.disclaimerAccepted} onCheckedChange={(checked) => setForm({ ...form, disclaimerAccepted: checked })} />
-              </div>
+              ) : (
+                <div className="rounded-lg border bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  The platform disclaimer is applied automatically for dashboard listings.
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -710,30 +737,21 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
 
           {formStep === 4 ? (
             <div className="rounded-xl border bg-slate-50 p-5">
-              <h3 className="text-lg font-semibold text-gray-900">Subscription Decision</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Subscription Check</h3>
               <p className="mt-2 text-sm text-gray-600">
-                Choose a plan or remain on the free plan. Listing approval still happens through admin review.
+                Your active subscription is checked when you submit this listing. Free plans and paid plans have different property limits.
               </p>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                {[
-                  { value: 'free', label: 'Remain on Free Plan', description: 'Standard visibility after approval.' },
-                  { value: 'basic', label: 'Basic Plan', description: 'Better placement and support priority.' },
-                  { value: 'premium', label: 'Premium Plan', description: 'Best visibility and featured opportunities.' },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setSubscriptionChoice(option.value as 'free' | 'basic' | 'premium')}
-                    className={`rounded-xl border p-4 text-left transition-colors ${
-                      subscriptionChoice === option.value
-                        ? 'border-secondary bg-secondary/5'
-                        : 'border-slate-200 bg-white'
-                    }`}
-                  >
-                    <p className="font-medium text-gray-900">{option.label}</p>
-                    <p className="mt-1 text-sm text-gray-600">{option.description}</p>
-                  </button>
-                ))}
+              <div className="mt-4 rounded-xl border bg-white p-4 text-sm text-slate-600">
+                <p>
+                  If you have already reached your plan limit, submission will be blocked until you upgrade your subscription.
+                </p>
+                <div className="mt-4">
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard/subscriptions">
+                      Manage subscription
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
           ) : null}

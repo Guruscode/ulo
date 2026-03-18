@@ -1,167 +1,116 @@
-'use client'
+import Link from 'next/link'
+import { Check } from 'lucide-react'
 
+import HomeFooter from '@/components/home/home-footer'
+import HomeNav from '@/components/home/home-nav'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Check, X } from 'lucide-react'
-import HomeNav from '@/components/home/home-nav'
-import HomeFooter from '@/components/home/home-footer'
-import { motion } from 'framer-motion'
+import { listPlansForActor } from '@/lib/server/subscriptions/service'
 
-const plans = [
-  {
-    name: 'Manager',
-    price: '₦15,900',
-    description: 'Perfect for individual property managers',
-    features: [
-      { label: 'Listings', value: '120' },
-      { label: 'Auto PushUp', value: 'Every 15 days' },
-      { label: 'Area Specialist', value: '1' },
-      { label: 'Manual Push Up', value: '35' },
-      { label: 'Premium', value: '20' },
-      { label: 'Premium Gold', value: '-' },
-      { label: 'Social Media Ads', value: '-' },
-      { label: 'Banner Ads', value: '-' },
-      { label: 'Sponsored Listings', value: '-' },
-      { label: 'View Client Request', value: 'Yes' },
-    ],
-    popular: false,
-  },
-  {
-    name: 'Premium',
-    price: '₦27,900',
-    description: 'Best for growing real estate businesses',
-    features: [
-      { label: 'Listings', value: '300' },
-      { label: 'Auto PushUp', value: 'Every 9 days' },
-      { label: 'Area Specialist', value: '1' },
-      { label: 'Manual Push Up', value: '65' },
-      { label: 'Premium', value: '60' },
-      { label: 'Premium Gold', value: '-' },
-      { label: 'Social Media Ads', value: '-' },
-      { label: 'Banner Ads', value: '-' },
-      { label: 'Sponsored Listings', value: '-' },
-      { label: 'View Client Request', value: 'Yes' },
-    ],
-    popular: true,
-  },
-  {
-    name: 'Gold',
-    price: '₦119,900',
-    description: 'For established agencies and teams',
-    features: [
-      { label: 'Listings', value: '3,000' },
-      { label: 'Auto PushUp', value: 'Every 3 days' },
-      { label: 'Area Specialist', value: '3' },
-      { label: 'Manual Push Up', value: '300' },
-      { label: 'Premium', value: '350' },
-      { label: 'Premium Gold', value: '40' },
-      { label: 'Social Media Ads', value: '2' },
-      { label: 'Banner Ads', value: '-' },
-      { label: 'Sponsored Listings', value: '3' },
-      { label: 'View Client Request', value: 'Yes' },
-    ],
-    popular: false,
-  },
-  {
-    name: 'Platinum',
-    price: '₦169,900',
-    description: 'Ultimate package for enterprise clients',
-    features: [
-      { label: 'Listings', value: 'Unlimited' },
-      { label: 'Auto PushUp', value: 'Every 2 days' },
-      { label: 'Area Specialist', value: '4' },
-      { label: 'Manual Push Up', value: '500' },
-      { label: 'Premium', value: '600' },
-      { label: 'Premium Gold', value: '80' },
-      { label: 'Social Media Ads', value: '2' },
-      { label: 'Banner Ads', value: '1' },
-      { label: 'Sponsored Listings', value: '5' },
-      { label: 'View Client Request', value: 'Yes' },
-    ],
-    popular: false,
-  },
-]
+function formatMoney(amount: number) {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
 
-export default function PricingPage() {
+function limitLabel(value: number, label: string) {
+  if (value < 0) return `Unlimited ${label}`
+  return `${value} ${label}${value === 1 ? '' : 's'}`
+}
+
+export default async function PricingPage() {
+  const plans = await listPlansForActor()
+
   return (
     <div className="min-h-screen bg-background">
       <HomeNav />
 
-      {/* Hero Section */}
       <section className="bg-gradient-to-br from-secondary/10 via-background to-secondary/5 py-16 md:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-4"
-          >
-            <h1 className="text-5xl md:text-6xl font-serif font-bold text-secondary">Pricing Plans</h1>
-            <p className="text-xl text-foreground/70 max-w-2xl mx-auto">
-              Choose the perfect plan for your real estate business needs
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="space-y-4 text-center">
+            <h1 className="font-serif text-5xl font-bold text-secondary md:text-6xl">Pricing Plans</h1>
+            <p className="mx-auto max-w-2xl text-xl text-foreground/70">
+              Choose the plan that matches your listing volume. These prices and limits are managed live from the admin panel.
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pb-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {plans.map((plan, index) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className={`h-full flex flex-col relative overflow-hidden ${
-                plan.popular 
-                  ? 'border-2 border-secondary shadow-lg' 
-                  : 'border border-border hover:shadow-lg'
-              }`}>
-                {plan.popular && (
-                  <div className="absolute top-0 right-0 bg-secondary text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+      <section className="mx-auto max-w-7xl px-4 py-16 pb-24 sm:px-6 lg:px-8">
+        <div className={`grid grid-cols-1 gap-6 ${plans.length >= 4 ? 'lg:grid-cols-4' : plans.length === 3 ? 'lg:grid-cols-3' : 'md:grid-cols-2'}`}>
+          {plans.map((plan, index) => {
+            const highlighted = index === 1 || (!plan.isFree && plan.priceAmount > 0 && index === 0)
+
+            return (
+              <Card
+                key={plan.id}
+                className={`relative flex h-full flex-col overflow-hidden ${
+                  highlighted ? 'border-2 border-secondary shadow-lg' : 'border border-border hover:shadow-lg'
+                }`}
+              >
+                {highlighted ? (
+                  <div className="absolute right-0 top-0 rounded-bl-lg bg-secondary px-3 py-1 text-xs font-bold text-white">
                     POPULAR
                   </div>
-                )}
-                
-                <div className="p-6 flex-1 flex flex-col">
+                ) : null}
+
+                <div className="flex flex-1 flex-col p-6">
                   <div className="mb-4">
-                    <h3 className="text-xl font-bold text-secondary">{plan.name}</h3>
-                    <p className="text-sm text-foreground/60 mt-1">{plan.description}</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-bold text-secondary">{plan.name}</h3>
+                      {plan.isFree ? <Badge variant="outline">Free</Badge> : null}
+                    </div>
+                    <p className="mt-1 text-sm text-foreground/60">{plan.description}</p>
                   </div>
 
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-foreground">{plan.price}</span>
+                    <span className="text-4xl font-bold text-foreground">
+                      {plan.isFree ? 'Free' : formatMoney(plan.priceAmount)}
+                    </span>
+                    {!plan.isFree ? (
+                      <span className="ml-2 text-sm text-foreground/50">/ {plan.billingInterval}</span>
+                    ) : null}
                   </div>
 
-                  <div className="flex-1 space-y-3 mb-6">
-                    {plan.features.map((feature, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-sm">
-                        <span className="text-foreground/60">{feature.label}</span>
-                        <span className={`font-medium ${feature.value === 'Yes' ? 'text-green-600' : feature.value === '-' ? 'text-foreground/30' : 'text-foreground'}`}>
-                          {feature.value}
-                        </span>
+                  <div className="mb-6 space-y-3 rounded-xl bg-slate-50 p-4 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-foreground/60">Property listings</span>
+                      <span className="font-medium text-foreground">{limitLabel(plan.propertyLimit, 'listing')}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-foreground/60">Hotels</span>
+                      <span className="font-medium text-foreground">{limitLabel(plan.hotelLimit, 'hotel')}</span>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 flex-1 space-y-3">
+                    {plan.features.map((feature, featureIndex) => (
+                      <div key={`${plan.id}-${featureIndex}`} className="flex items-start gap-3 text-sm">
+                        <Check className="mt-0.5 h-4 w-4 text-green-600" />
+                        <span className="text-foreground/70">{feature}</span>
                       </div>
                     ))}
                   </div>
 
-                  <Button 
+                  <Button
+                    asChild
                     className={`w-full ${
-                      plan.popular 
-                        ? 'bg-secondary hover:bg-secondary/90 text-white' 
-                        : 'bg-primary hover:bg-primary/90 text-white'
+                      highlighted ? 'bg-secondary text-white hover:bg-secondary/90' : 'bg-primary text-white hover:bg-primary/90'
                     }`}
                   >
-                    Buy Now
+                    <Link href="/signup">{plan.isFree ? 'Start Free' : 'Choose Plan'}</Link>
                   </Button>
-                  
-                  <p className="text-xs text-center text-foreground/50 mt-3">
-                    Pay online for instant activation
+
+                  <p className="mt-3 text-center text-xs text-foreground/50">
+                    {plan.isFree ? 'Free access starts immediately after signup.' : 'Pay online for activation through Paystack.'}
                   </p>
                 </div>
               </Card>
-            </motion.div>
-          ))}
+            )
+          })}
         </div>
       </section>
 
@@ -169,4 +118,3 @@ export default function PricingPage() {
     </div>
   )
 }
-

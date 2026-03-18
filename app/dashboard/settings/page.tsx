@@ -10,15 +10,29 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { ApiClientError } from '@/lib/client/api-error'
 import { updateAccountRequest, updatePasswordRequest } from '@/lib/client/account-client'
 import { accountRequest } from '@/lib/client/account-client'
+import type { AccountType, IdentityType } from '@/lib/auth/types'
 
 type SettingsForm = {
   name: string
   email: string
   phone: string
+  address: string
+  state: string
+  localGovernment: string
+  accountType: AccountType
+  identityType: IdentityType | ''
+  identityNumber: string
   timezone: string
   emailNotifications: boolean
   pushNotifications: boolean
@@ -29,6 +43,12 @@ const DEFAULT_SETTINGS: SettingsForm = {
   name: '',
   email: '',
   phone: '',
+  address: '',
+  state: '',
+  localGovernment: '',
+  accountType: 'user',
+  identityType: '',
+  identityNumber: '',
   timezone: 'Africa/Lagos',
   emailNotifications: true,
   pushNotifications: false,
@@ -60,6 +80,12 @@ export default function DashboardSettingsPage() {
           name: response.user.name || '',
           email: response.user.email || '',
           phone: response.user.phone || '',
+          address: response.user.address || '',
+          state: response.user.state || '',
+          localGovernment: response.user.localGovernment || '',
+          accountType: response.user.accountType || 'user',
+          identityType: response.user.identityType || '',
+          identityNumber: response.user.identityNumber || '',
           timezone: response.user.timezone || 'Africa/Lagos',
           emailNotifications: Boolean(response.user.emailNotifications),
           pushNotifications: Boolean(response.user.pushNotifications),
@@ -84,6 +110,11 @@ export default function DashboardSettingsPage() {
         name: settings.name,
         email: settings.email,
         phone: settings.phone,
+        address: settings.address,
+        state: settings.state,
+        localGovernment: settings.localGovernment,
+        identityType: settings.identityType || null,
+        identityNumber: settings.identityNumber,
         timezone: settings.timezone,
         emailNotifications: settings.emailNotifications,
         pushNotifications: settings.pushNotifications,
@@ -121,6 +152,8 @@ export default function DashboardSettingsPage() {
     }
   }
 
+  const requiresIdentity = settings.accountType !== 'user'
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -136,7 +169,7 @@ export default function DashboardSettingsPage() {
             </div>
             <div>
               <p className="font-semibold text-gray-900 text-lg">{user?.name || 'Loading...'}</p>
-              <p className="text-gray-500">{user?.role === 'admin' ? 'Admin' : 'Dashboard User'}</p>
+              <p className="text-gray-500">{user?.role === 'admin' ? 'Admin' : settings.accountType.replace('_', ' ')}</p>
             </div>
           </div>
 
@@ -154,9 +187,45 @@ export default function DashboardSettingsPage() {
               <Input id="phone" type="tel" value={settings.phone} onChange={(e) => setSettings({ ...settings, phone: e.target.value })} className="h-11" />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="accountType">Account Type</Label>
+              <Input id="accountType" value={settings.accountType.replace('_', ' ')} className="h-11 capitalize" disabled />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="address">House Address</Label>
+              <Input id="address" value={settings.address} onChange={(e) => setSettings({ ...settings, address: e.target.value })} className="h-11" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="state">State</Label>
+              <Input id="state" value={settings.state} onChange={(e) => setSettings({ ...settings, state: e.target.value })} className="h-11" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="localGovernment">Local Government</Label>
+              <Input id="localGovernment" value={settings.localGovernment} onChange={(e) => setSettings({ ...settings, localGovernment: e.target.value })} className="h-11" />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
               <Input id="timezone" value={settings.timezone} onChange={(e) => setSettings({ ...settings, timezone: e.target.value })} className="h-11" />
             </div>
+            {requiresIdentity ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="identityType">Identity Type</Label>
+                  <Select value={settings.identityType || 'nin'} onValueChange={(value) => setSettings({ ...settings, identityType: value as IdentityType })}>
+                    <SelectTrigger id="identityType" className="h-11">
+                      <SelectValue placeholder="Select identity type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nin">NIN</SelectItem>
+                      <SelectItem value="bvn">BVN</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="identityNumber">Identity Number</Label>
+                  <Input id="identityNumber" value={settings.identityNumber} onChange={(e) => setSettings({ ...settings, identityNumber: e.target.value })} className="h-11" />
+                </div>
+              </>
+            ) : null}
           </div>
           <div className="mt-6 flex justify-end">
             <Button className="bg-secondary hover:bg-secondary/90 text-white" onClick={handleSaveProfile} disabled={profileSaving || isLoading}>

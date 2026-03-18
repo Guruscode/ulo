@@ -15,6 +15,7 @@ import {
   findCurrentUserSubscription,
   findSubscriptionPlanById,
   findSubscriptionPlanBySlug,
+  findUserSubscriptionById,
   findUserSubscriptionByReference,
   listSubscriptionPlans,
   listUserSubscriptions,
@@ -79,6 +80,7 @@ export async function savePlanForAdmin(actor: AuthUser, input: unknown, id?: str
     id: randomUUID(),
     currency: 'NGN',
     ...parsed.data,
+    paystackPlanCode: parsed.data.paystackPlanCode ?? null,
   })
   const created = await findSubscriptionPlanBySlug(parsed.data.slug)
   if (!created) throw new ApiError(500, 'PLAN_CREATE_FAILED', 'Unable to create subscription plan.')
@@ -92,8 +94,14 @@ export async function listSubscriptionsForActor(actor: AuthUser) {
 export async function getEffectiveSubscriptionForUser(userId: string) {
   const active = await findCurrentUserSubscription(userId)
   if (active) {
-    const plan = await findSubscriptionPlanById(active.planId)
-    if (plan) return { plan, subscription: active }
+    if (active.endsAt && new Date(active.endsAt).getTime() <= Date.now()) {
+      await updateUserSubscription(active.id, {
+        status: 'expired',
+      })
+    } else {
+      const plan = await findSubscriptionPlanById(active.planId)
+      if (plan) return { plan, subscription: active }
+    }
   }
 
   const freePlan = await findSubscriptionPlanBySlug('free')
@@ -120,7 +128,7 @@ export async function initializeSubscriptionCheckout(actor: AuthUser, planId: st
   }
 
   const reference = `ULO-SUB-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-  const callbackUrl = `${env.appUrl.replace(/\/$/, '')}/dashboard/subscriptions/callback?reference=${reference}`
+  const callbackUrl = `${env.appUrl.replace(/\/$/, '')}/dashboard/subscriptions/callback`
   const initialized = await initializePaystackTransaction({
     email: actor.email,
     amount: plan.priceAmount * 100,
@@ -198,7 +206,26 @@ export async function verifySubscriptionForUser(actor: AuthUser, reference: stri
 
 export async function updateSubscriptionStatusForAdmin(actor: AuthUser, id: string, status: 'active' | 'expired' | 'cancelled') {
   requireAdmin(actor)
-  const updated = await updateUserSubscription(id, { status })
+  const existing = await findUserSubscriptionById(id)
+  if (!existing) {
+    throw new ApiError(404, 'SUBSCRIPTION_NOT_FOUND', 'Subscription not found.')
+  }
+
+  let startsAt = existing.startsAt
+  let endsAt = existing.endsAt
+
+  if (status === 'active') {
+    const plan = await findSubscriptionPlanById(existing.planId)
+    if (!plan) {
+      throw new ApiError(404, 'PLAN_NOT_FOUND', 'Subscription plan not found.')
+    }
+
+    startsAt = new Date().toISOString()
+    endsAt = calculateEndDate(plan, new Date())
+    await expireActiveUserSubscriptions(existing.userId)
+  }
+
+  const updated = await updateUserSubscription(id, { status, startsAt, endsAt })
   if (!updated) {
     throw new ApiError(404, 'SUBSCRIPTION_NOT_FOUND', 'Subscription not found.')
   }

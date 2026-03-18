@@ -249,11 +249,19 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
     setSaving(true)
     try {
       const payload = toPayload(form)
+      const sanitizedPayload =
+        mode === 'admin'
+          ? payload
+          : {
+              ...payload,
+              status: 'active' as const,
+              featured: false,
+            }
       if (editingHotel) {
-        await updateHotelRequest(editingHotel.id, payload)
+        await updateHotelRequest(editingHotel.id, sanitizedPayload)
         toast.success(mode === 'admin' ? 'Hotel updated.' : 'Hotel updated and sent for review.')
       } else {
-        await createHotelRequest(payload)
+        await createHotelRequest(sanitizedPayload)
         toast.success(mode === 'admin' ? 'Hotel created.' : 'Hotel created and awaiting approval.')
       }
       closeForm()
@@ -463,20 +471,24 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
             <div className="space-y-2"><Label>Price per Night</Label><Input type="number" value={form.priceValue} onChange={(event) => setForm({ ...form, priceValue: event.target.value })} /></div>
             <div className="space-y-2"><Label>Rating</Label><Input type="number" step="0.1" value={form.rating} onChange={(event) => setForm({ ...form, rating: event.target.value })} /></div>
             <div className="space-y-2"><Label>Review Count</Label><Input type="number" value={form.reviewCount} onChange={(event) => setForm({ ...form, reviewCount: event.target.value })} /></div>
-            <div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as HotelForm['status'] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="pending">Pending</SelectItem></SelectContent></Select></div>
+            {mode === 'admin' ? (
+              <div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as HotelForm['status'] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="pending">Pending</SelectItem></SelectContent></Select></div>
+            ) : null}
             <div className="space-y-2 md:col-span-2"><Label>Amenities</Label><Textarea rows={3} value={form.amenities} onChange={(event) => setForm({ ...form, amenities: event.target.value })} placeholder="Free WiFi, Restaurant, Pool" /></div>
             <div className="space-y-2"><Label>Phone</Label><Input value={form.contactPhone} onChange={(event) => setForm({ ...form, contactPhone: event.target.value })} /></div>
             <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.contactEmail} onChange={(event) => setForm({ ...form, contactEmail: event.target.value })} /></div>
             <div className="space-y-2 md:col-span-2"><Label>Address</Label><Input value={form.contactAddress} onChange={(event) => setForm({ ...form, contactAddress: event.target.value })} /></div>
-            <div className="space-y-2 md:col-span-2">
-              <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-                <div>
-                  <p className="font-medium text-gray-900">Featured Hotel</p>
-                  <p className="text-sm text-gray-500">Promote this listing on the public hotels page.</p>
+            {mode === 'admin' ? (
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                  <div>
+                    <p className="font-medium text-gray-900">Featured Hotel</p>
+                    <p className="text-sm text-gray-500">Promote this listing on the public hotels page.</p>
+                  </div>
+                  <Switch checked={form.featured} onCheckedChange={(checked) => setForm({ ...form, featured: checked })} />
                 </div>
-                <Switch checked={form.featured} onCheckedChange={(checked) => setForm({ ...form, featured: checked })} />
               </div>
-            </div>
+            ) : null}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">

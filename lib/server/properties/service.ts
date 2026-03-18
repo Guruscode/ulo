@@ -11,6 +11,7 @@ import type {
 } from '@/lib/properties/types'
 import { ApiError } from '@/lib/server/http/api-error'
 import { sendPropertyApprovalEmail, sendPropertyCreatedEmails } from '@/lib/server/mail/notifications'
+import { assertListingCapacity } from '@/lib/server/subscriptions/service'
 import {
   countProperties,
   createProperty,
@@ -209,6 +210,7 @@ export async function getPropertyForActor(id: string, actor?: AuthUser | null) {
 
 export async function createPropertyForActor(input: unknown, actor: AuthUser) {
   ensureCanPublish(actor)
+  await assertListingCapacity(actor, 'property', await countProperties(actor.id))
   const normalized = normalizeUpsertInput(input)
   const approvalStatus: PropertyApprovalStatus = actor.role === 'admin' ? 'approved' : 'pending_review'
   const now = new Date().toISOString()

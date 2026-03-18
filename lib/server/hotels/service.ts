@@ -11,6 +11,7 @@ import type {
 } from '@/lib/hotels/types'
 import { ApiError } from '@/lib/server/http/api-error'
 import { sendHotelApprovalEmail, sendHotelBookingEmails, sendHotelCreatedEmails } from '@/lib/server/mail/notifications'
+import { assertListingCapacity } from '@/lib/server/subscriptions/service'
 import {
   countHotels,
   createHotel,
@@ -168,6 +169,7 @@ export async function getHotelForActor(id: string, actor?: AuthUser | null) {
 
 export async function createHotelForActor(input: unknown, actor: AuthUser) {
   ensureCanManageHotels(actor)
+  await assertListingCapacity(actor, 'hotel', await countHotels(actor.id))
   const parsed = hotelSchema.safeParse(input)
   if (!parsed.success) {
     throw new ApiError(400, 'VALIDATION_ERROR', 'Please correct the hotel form fields.', parsed.error.flatten())

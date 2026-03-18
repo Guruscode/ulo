@@ -524,10 +524,15 @@ export async function updateHotelBookingStatus(id: string, status: HotelBookingS
   return findHotelBookingById(id)
 }
 
-export async function countHotels() {
+export async function countHotels(userId?: string) {
   await initializeDatabase()
   const db = getDbClient()
-  const result = await db.execute(`SELECT COUNT(*) AS count FROM hotels`)
+  const result = await db.execute({
+    sql: userId
+      ? `SELECT COUNT(*) AS count FROM hotels WHERE created_by_user_id = ?`
+      : `SELECT COUNT(*) AS count FROM hotels`,
+    args: userId ? [userId] : [],
+  })
   return Number(result.rows[0]?.count ?? 0)
 }
 

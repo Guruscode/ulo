@@ -33,7 +33,6 @@ export default function HomeNav() {
     { href: '/hotels', label: 'Hotels', key: 'hotels' },
     { href: '/pricing', label: 'Pricing', key: 'pricing' },
     { href: '/blog', label: 'Blog', key: 'blog' },
-    { href: '/help', label: 'FAQ', key: 'faq' },
     { href: '/help', label: 'Contact', key: 'contact' },
   ]
 
