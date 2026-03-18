@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import type { Estate } from '@/components/home/types'
+import { DEFAULT_ESTATE_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
 
 type EstateSectionProps = {
   estates: Estate[]
@@ -28,7 +29,7 @@ export default function EstateSection({ estates }: EstateSectionProps) {
             <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-300">
               <div
                 className="relative h-56 bg-cover bg-center"
-                style={{ backgroundImage: `url(${estate.image})` }}
+                style={{ backgroundImage: `url(${resolveImageUrl(estate.image, DEFAULT_ESTATE_IMAGE)})` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent group-hover:from-black/75 transition-all duration-300" />
                 <div className="absolute bottom-4 left-4 text-white">

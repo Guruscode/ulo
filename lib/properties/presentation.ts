@@ -1,5 +1,6 @@
 import type { PropertyRecord } from '@/lib/properties/types'
 import type { Property } from '@/components/home/types'
+import { DEFAULT_PROPERTY_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
 
 export function formatPropertyPrice(property: Pick<PropertyRecord, 'currency' | 'priceValue' | 'pricingPeriod' | 'type'>) {
   const formatted = new Intl.NumberFormat('en-NG', {
@@ -34,8 +35,11 @@ export function toHomeProperty(property: PropertyRecord): Property {
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
     sqft: property.sqft.toLocaleString(),
-    image: property.imageUrls[0] || '',
-    images: property.imageUrls,
+    image: resolveImageUrl(property.imageUrls[0], DEFAULT_PROPERTY_IMAGE),
+    images:
+      property.imageUrls.length > 0
+        ? property.imageUrls.map((imageUrl) => resolveImageUrl(imageUrl, DEFAULT_PROPERTY_IMAGE))
+        : [DEFAULT_PROPERTY_IMAGE],
     type: property.type,
     listedBy: property.listedBy,
     estate: property.estate || undefined,

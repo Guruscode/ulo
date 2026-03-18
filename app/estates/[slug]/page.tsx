@@ -8,6 +8,7 @@ import HomeNav from '@/components/home/home-nav'
 import PropertyCard from '@/components/home/property-card'
 import { usePublicHomeProperties } from '@/components/properties/use-public-home-properties'
 import { homeEstates } from '@/lib/home-estates'
+import { DEFAULT_ESTATE_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
 
 export default function EstatePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
@@ -29,7 +30,7 @@ export default function EstatePage({ params }: { params: Promise<{ slug: string 
       <section className="bg-gradient-to-b from-white via-white to-background pt-16 md:pt-24 pb-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-10 items-start">
-            <div className="w-full lg:w-1/2 h-72 rounded-2xl bg-cover bg-center shadow-xl" style={{ backgroundImage: `url(${estate.image})` }} />
+            <div className="w-full lg:w-1/2 h-72 rounded-2xl bg-cover bg-center shadow-xl" style={{ backgroundImage: `url(${resolveImageUrl(estate.image, DEFAULT_ESTATE_IMAGE)})` }} />
             <div className="flex-1 space-y-4">
               <p className="text-sm uppercase tracking-[0.2em] text-primary">Estate</p>
               <h1 className="text-4xl md:text-5xl font-serif font-bold text-secondary">{estate.name}</h1>

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import type { ClipboardEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Eye, Loader2, Pencil, ShieldCheck, Trash2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -28,6 +29,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiClientError } from '@/lib/client/api-error'
+import { DEFAULT_PROPERTY_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
 import {
   createPropertyRequest,
   deletePropertyRequest,
@@ -39,6 +41,8 @@ import type { PropertyRecord, PropertyUpsertInput } from '@/lib/properties/types
 import { formatPropertyPrice } from '@/lib/properties/presentation'
 
 type PropertyManagerMode = 'dashboard' | 'admin'
+type PropertyFieldKey = keyof PropertyFormState
+type PropertyFieldErrors = Partial<Record<PropertyFieldKey, string[]>>
 
 type PropertyFormState = {
   title: string
@@ -191,6 +195,19 @@ function approvalBadgeClass(status: PropertyRecord['approvalStatus']) {
   }
 }
 
+function getValidationErrors(error: ApiClientError) {
+  const details = error.details as
+    | {
+        fieldErrors?: Record<string, string[] | undefined>
+      }
+    | undefined
+
+  return {
+    message: error.message,
+    fieldErrors: (details?.fieldErrors ?? {}) as PropertyFieldErrors,
+  }
+}
+
 export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
   const [properties, setProperties] = useState<PropertyRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -203,6 +220,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
   const [openForm, setOpenForm] = useState(false)
   const [formStep, setFormStep] = useState(0)
   const [form, setForm] = useState<PropertyFormState>(EMPTY_FORM)
+  const [formError, setFormError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<PropertyFieldErrors>({})
   const [actingPropertyId, setActingPropertyId] = useState<string | null>(null)
 
   const steps =
@@ -239,9 +258,37 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
     [properties]
   )
 
+  const updateImageUrlAtIndex = (index: number, value: string) => {
+    const next = [...form.imageUrls] as PropertyFormState['imageUrls']
+    next[index] = value
+    setForm({ ...form, imageUrls: next })
+  }
+
+  const handleImagePaste = (index: number, event: ClipboardEvent<HTMLInputElement>) => {
+    const pasted = event.clipboardData.getData('text')
+    if (!pasted) return
+    event.preventDefault()
+    updateImageUrlAtIndex(index, pasted.trim())
+  }
+
+  const pasteImageFromClipboard = async (index: number) => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (!text.trim()) {
+        toast.error('Clipboard is empty.')
+        return
+      }
+      updateImageUrlAtIndex(index, text.trim())
+    } catch {
+      toast.error('Clipboard paste is blocked. Use keyboard paste inside the field.')
+    }
+  }
+
   const openCreateForm = () => {
     setEditingProperty(null)
     setForm(EMPTY_FORM)
+    setFormError('')
+    setFieldErrors({})
     setFormStep(0)
     setOpenForm(true)
   }
@@ -249,6 +296,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
   const openEditForm = (property: PropertyRecord) => {
     setEditingProperty(property)
     setForm(toFormState(property))
+    setFormError('')
+    setFieldErrors({})
     setFormStep(0)
     setOpenForm(true)
   }
@@ -257,11 +306,15 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
     setOpenForm(false)
     setEditingProperty(null)
     setForm(EMPTY_FORM)
+    setFormError('')
+    setFieldErrors({})
     setFormStep(0)
   }
 
   const handleSubmit = async () => {
     setSaving(true)
+    setFormError('')
+    setFieldErrors({})
 
     try {
       const payload = toRequestPayload(form)
@@ -288,9 +341,16 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
       handleCloseForm()
       await loadProperties()
     } catch (error) {
-      const message =
-        error instanceof ApiClientError ? error.message : 'Unable to save the property right now.'
-      toast.error(message)
+      if (error instanceof ApiClientError && error.code === 'VALIDATION_ERROR') {
+        const validation = getValidationErrors(error)
+        setFormError(validation.message)
+        setFieldErrors(validation.fieldErrors)
+      } else {
+        const message =
+          error instanceof ApiClientError ? error.message : 'Unable to save the property right now.'
+        setFormError(message)
+        toast.error(message)
+      }
     } finally {
       setSaving(false)
     }
@@ -519,11 +579,29 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
             ))}
           </div>
 
+          {formError ? (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p className="font-medium text-red-800">{formError}</p>
+              {Object.entries(fieldErrors).length > 0 ? (
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {Object.entries(fieldErrors).flatMap(([field, messages]) =>
+                    (messages ?? []).map((message, index) => (
+                      <li key={`${field}-${index}`}>
+                        <span className="font-medium">{field}</span>: {message}
+                      </li>
+                    ))
+                  )}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+
           {formStep === 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input id="title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+                {fieldErrors.title?.[0] ? <p className="text-sm text-red-600">{fieldErrors.title[0]}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="type">Property Type</Label>
@@ -539,6 +617,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="space-y-2">
                 <Label htmlFor="location">Location</Label>
                 <Input id="location" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} />
+                {fieldErrors.location?.[0] ? <p className="text-sm text-red-600">{fieldErrors.location[0]}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="listedBy">Posted By</Label>
@@ -555,6 +634,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="fullAddress">Full Address</Label>
                 <Input id="fullAddress" value={form.fullAddress} onChange={(event) => setForm({ ...form, fullAddress: event.target.value })} />
+                {fieldErrors.fullAddress?.[0] ? <p className="text-sm text-red-600">{fieldErrors.fullAddress[0]}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="estate">Estate / Area</Label>
@@ -563,6 +643,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+                {fieldErrors.description?.[0] ? <p className="text-sm text-red-600">{fieldErrors.description[0]}</p> : null}
               </div>
             </div>
           ) : null}
@@ -572,6 +653,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="space-y-2">
                 <Label htmlFor="priceValue">Price</Label>
                 <Input id="priceValue" type="number" value={form.priceValue} onChange={(event) => setForm({ ...form, priceValue: event.target.value })} />
+                {fieldErrors.priceValue?.[0] ? <p className="text-sm text-red-600">{fieldErrors.priceValue[0]}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Currency</Label>
@@ -619,6 +701,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="space-y-2">
                 <Label htmlFor="sqft">Square Footage</Label>
                 <Input id="sqft" type="number" value={form.sqft} onChange={(event) => setForm({ ...form, sqft: event.target.value })} />
+                {fieldErrors.sqft?.[0] ? <p className="text-sm text-red-600">{fieldErrors.sqft[0]}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="yearBuilt">Year Built</Label>
@@ -635,6 +718,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="features">Features</Label>
                 <Textarea id="features" rows={4} value={form.features} onChange={(event) => setForm({ ...form, features: event.target.value })} placeholder="Pool, Gym, Security, Parking" />
+                {fieldErrors.features?.[0] ? <p className="text-sm text-red-600">{fieldErrors.features[0]}</p> : null}
               </div>
               {mode === 'admin' ? (
                 <div className="space-y-2">
@@ -666,23 +750,28 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="grid gap-4 md:grid-cols-2">
                 {form.imageUrls.map((imageUrl, index) => (
                   <div key={index} className="space-y-2">
-                    <Label htmlFor={`image-${index}`}>Image URL {index + 1}</Label>
+                    <div className="flex items-center justify-between gap-3">
+                      <Label htmlFor={`image-${index}`}>Image URL {index + 1}</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void pasteImageFromClipboard(index)}>
+                        Paste URL
+                      </Button>
+                    </div>
                     <Input
                       id={`image-${index}`}
+                      placeholder="https://example.com/property-image.jpg"
                       value={imageUrl}
-                      onChange={(event) => {
-                        const next = [...form.imageUrls] as PropertyFormState['imageUrls']
-                        next[index] = event.target.value
-                        setForm({ ...form, imageUrls: next })
-                      }}
+                      onPaste={(event) => handleImagePaste(index, event)}
+                      onChange={(event) => updateImageUrlAtIndex(index, event.target.value)}
                     />
                   </div>
                 ))}
               </div>
+              {fieldErrors.imageUrls?.[0] ? <p className="text-sm text-red-600">{fieldErrors.imageUrls[0]}</p> : null}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="videoUrl">Neighbourhood / Tour Video URL</Label>
                   <Input id="videoUrl" value={form.videoUrl} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} />
+                  {fieldErrors.videoUrl?.[0] ? <p className="text-sm text-red-600">{fieldErrors.videoUrl[0]}</p> : null}
                 </div>
                 {mode === 'admin' ? (
                   <div className="space-y-2">
@@ -693,18 +782,22 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 <div className="space-y-2">
                   <Label htmlFor="contactName">Contact Name</Label>
                   <Input id="contactName" value={form.contactName} onChange={(event) => setForm({ ...form, contactName: event.target.value })} />
+                  {fieldErrors.contactName?.[0] ? <p className="text-sm text-red-600">{fieldErrors.contactName[0]}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contactPhone">Contact Phone</Label>
                   <Input id="contactPhone" value={form.contactPhone} onChange={(event) => setForm({ ...form, contactPhone: event.target.value })} />
+                  {fieldErrors.contactPhone?.[0] ? <p className="text-sm text-red-600">{fieldErrors.contactPhone[0]}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contactEmail">Contact Email</Label>
                   <Input id="contactEmail" type="email" value={form.contactEmail} onChange={(event) => setForm({ ...form, contactEmail: event.target.value })} />
+                  {fieldErrors.contactEmail?.[0] ? <p className="text-sm text-red-600">{fieldErrors.contactEmail[0]}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="documentInfo">Document Information</Label>
                   <Input id="documentInfo" value={form.documentInfo} onChange={(event) => setForm({ ...form, documentInfo: event.target.value })} />
+                  {fieldErrors.documentInfo?.[0] ? <p className="text-sm text-red-600">{fieldErrors.documentInfo[0]}</p> : null}
                 </div>
               </div>
               {mode === 'admin' ? (
@@ -790,10 +883,10 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               </DialogHeader>
               <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
                 <div className="space-y-3">
-                  <img src={viewProperty.imageUrls[0]} alt={viewProperty.title} className="h-72 w-full rounded-xl object-cover" />
+                  <img src={resolveImageUrl(viewProperty.imageUrls[0], DEFAULT_PROPERTY_IMAGE)} alt={viewProperty.title} className="h-72 w-full rounded-xl object-cover" />
                   <div className="grid grid-cols-2 gap-3">
-                    {viewProperty.imageUrls.slice(1).map((imageUrl, index) => (
-                      <img key={index} src={imageUrl} alt={`${viewProperty.title} ${index + 2}`} className="h-32 w-full rounded-xl object-cover" />
+                    {(viewProperty.imageUrls.length > 1 ? viewProperty.imageUrls.slice(1) : [DEFAULT_PROPERTY_IMAGE]).map((imageUrl, index) => (
+                      <img key={index} src={resolveImageUrl(imageUrl, DEFAULT_PROPERTY_IMAGE)} alt={`${viewProperty.title} ${index + 2}`} className="h-32 w-full rounded-xl object-cover" />
                     ))}
                   </div>
                 </div>

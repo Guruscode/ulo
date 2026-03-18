@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ApiClientError } from '@/lib/client/api-error'
 import { getPropertyRequest, savePropertyRequest, unsavePropertyRequest } from '@/lib/client/properties-client'
+import { DEFAULT_PROPERTY_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
 import { formatPropertyPrice } from '@/lib/properties/presentation'
 import type { PropertyRecord } from '@/lib/properties/types'
 import { toast } from 'sonner'
@@ -85,7 +86,10 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       : encodeURIComponent(`${property.title}, ${property.location}`)
 
   const listedByLabel = property.listedBy
-  const images = property.imageUrls
+  const images =
+    property.imageUrls.length > 0
+      ? property.imageUrls.map((imageUrl) => resolveImageUrl(imageUrl, DEFAULT_PROPERTY_IMAGE))
+      : [DEFAULT_PROPERTY_IMAGE]
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-[#f9f6f3]">

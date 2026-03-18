@@ -187,6 +187,102 @@ async function ensurePropertiesTableSchema() {
   const db = getDbClient()
   const result = await db.execute(`PRAGMA table_info(properties)`)
   const existingColumns = new Set(result.rows.map((row) => String(row.name)))
+  const idColumn = result.rows.find((row) => String(row.name) === 'id')
+
+  // Older databases used an integer primary key for properties.id, which breaks
+  // the current UUID-based inserts with SQLITE_MISMATCH. Rebuild into the current schema.
+  if (idColumn && String(idColumn.type || '').toUpperCase().includes('INT')) {
+    await db.execute(`ALTER TABLE properties RENAME TO properties_legacy`)
+    await db.execute(`
+      CREATE TABLE properties (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        location TEXT NOT NULL,
+        full_address TEXT NOT NULL,
+        estate TEXT,
+        latitude REAL,
+        longitude REAL,
+        price_value INTEGER NOT NULL,
+        currency TEXT NOT NULL CHECK (currency IN ('USD', 'NGN')),
+        pricing_period TEXT NOT NULL CHECK (pricing_period IN ('one-time', 'month', 'week', 'day')),
+        type TEXT NOT NULL CHECK (type IN ('For Sale', 'For Rent', 'Commercial', 'Land', 'Shortlet')),
+        listed_by TEXT NOT NULL CHECK (listed_by IN ('Agent', 'Landlord', 'Dealer', 'Owner')),
+        bedrooms INTEGER NOT NULL DEFAULT 0,
+        bathrooms REAL NOT NULL DEFAULT 0,
+        sqft INTEGER NOT NULL DEFAULT 0,
+        year_built INTEGER,
+        features_json TEXT NOT NULL DEFAULT '[]',
+        image_urls_json TEXT NOT NULL DEFAULT '[]',
+        video_url TEXT,
+        reference_code TEXT NOT NULL UNIQUE,
+        document_info TEXT,
+        contact_name TEXT NOT NULL,
+        contact_phone TEXT NOT NULL,
+        contact_email TEXT NOT NULL,
+        verification_status TEXT NOT NULL DEFAULT 'not_requested' CHECK (verification_status IN ('not_requested', 'requested', 'verified')),
+        approval_status TEXT NOT NULL DEFAULT 'pending_review' CHECK (approval_status IN ('draft', 'pending_review', 'approved', 'rejected')),
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'sold', 'pending')),
+        disclaimer_accepted INTEGER NOT NULL DEFAULT 0,
+        description TEXT NOT NULL,
+        featured INTEGER NOT NULL DEFAULT 0,
+        created_by_user_id TEXT NOT NULL,
+        approved_by_user_id TEXT,
+        approved_at TEXT,
+        rejection_reason TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await db.execute(`
+      INSERT INTO properties (
+        id, title, location, full_address, estate, latitude, longitude, price_value, currency, pricing_period,
+        type, listed_by, bedrooms, bathrooms, sqft, year_built, features_json, image_urls_json, video_url,
+        reference_code, document_info, contact_name, contact_phone, contact_email, verification_status,
+        approval_status, status, disclaimer_accepted, description, featured, created_by_user_id,
+        approved_by_user_id, approved_at, rejection_reason, created_at, updated_at
+      )
+      SELECT
+        CAST(id AS TEXT),
+        COALESCE(title, ''),
+        COALESCE(location, ''),
+        COALESCE(full_address, ''),
+        estate,
+        latitude,
+        longitude,
+        COALESCE(price_value, 0),
+        COALESCE(currency, 'NGN'),
+        COALESCE(pricing_period, 'one-time'),
+        COALESCE(type, 'For Sale'),
+        COALESCE(listed_by, 'Agent'),
+        COALESCE(bedrooms, 0),
+        COALESCE(bathrooms, 0),
+        COALESCE(sqft, 0),
+        year_built,
+        COALESCE(NULLIF(features_json, ''), '[]'),
+        COALESCE(NULLIF(image_urls_json, ''), '[]'),
+        video_url,
+        COALESCE(NULLIF(reference_code, ''), 'LEGACY-' || CAST(id AS TEXT)),
+        document_info,
+        COALESCE(contact_name, ''),
+        COALESCE(contact_phone, ''),
+        COALESCE(contact_email, ''),
+        COALESCE(verification_status, 'not_requested'),
+        COALESCE(approval_status, 'pending_review'),
+        COALESCE(status, 'active'),
+        COALESCE(disclaimer_accepted, 0),
+        COALESCE(description, ''),
+        COALESCE(featured, 0),
+        COALESCE(created_by_user_id, 'legacy-import'),
+        approved_by_user_id,
+        approved_at,
+        rejection_reason,
+        COALESCE(created_at, CURRENT_TIMESTAMP),
+        COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)
+      FROM properties_legacy
+    `)
+    await db.execute(`DROP TABLE properties_legacy`)
+    return ensurePropertiesTableSchema()
+  }
 
   for (const column of PROPERTY_COLUMNS) {
     if (!existingColumns.has(column.name)) {
