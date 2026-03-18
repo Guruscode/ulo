@@ -8,6 +8,17 @@ type OptionalServerEnv = {
   adminName?: string
   adminEmail?: string
   adminPassword?: string
+  smtpHost?: string
+  smtpPort?: number
+  smtpSecure?: boolean
+  smtpUser?: string
+  smtpPass?: string
+  smtpFromEmail?: string
+  smtpFromName?: string
+  notificationAdminEmail?: string
+  appUrl?: string
+  paystackSecretKey?: string
+  paystackPublicKey?: string
 }
 
 export type ServerEnv = RequiredServerEnv & OptionalServerEnv
@@ -36,6 +47,17 @@ export function getServerEnv(): ServerEnv {
     adminName: process.env.ADMIN_NAME,
     adminEmail: process.env.ADMIN_EMAIL?.toLowerCase(),
     adminPassword: process.env.ADMIN_PASSWORD,
+    smtpHost: process.env.SMTP_HOST,
+    smtpPort: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined,
+    smtpSecure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : undefined,
+    smtpUser: process.env.SMTP_USER,
+    smtpPass: process.env.SMTP_PASS,
+    smtpFromEmail: process.env.SMTP_FROM_EMAIL,
+    smtpFromName: process.env.SMTP_FROM_NAME,
+    notificationAdminEmail: process.env.NOTIFICATION_ADMIN_EMAIL?.toLowerCase(),
+    appUrl: process.env.APP_URL,
+    paystackSecretKey: process.env.PAYSTACK_SECRET_KEY,
+    paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
   }
 
   return cachedEnv

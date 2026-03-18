@@ -7,6 +7,7 @@ import EstateSection from '@/components/home/estate-section'
 import HeroServices from '@/components/home/hero-services'
 import HomeFooter from '@/components/home/home-footer'
 import HomeHero from '@/components/home/home-hero'
+import HomeHotels from '@/components/home/home-hotels'
 import HomeNav from '@/components/home/home-nav'
 import HomeProperties from '@/components/home/home-properties'
 import NeighbourhoodGuide from '@/components/home/neighbourhood-guide'
@@ -82,6 +83,7 @@ export default function Homepage() {
       />
       <HeroServices />
       <HomeProperties allProperties={properties} filteredProperties={filteredProperties} />
+      <HomeHotels />
       <NeighbourhoodGuide />
       <EstateSection estates={homeEstates} />
       <HomeFooter />

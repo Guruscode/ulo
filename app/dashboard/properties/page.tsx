@@ -1,7 +1,20 @@
+import { redirect } from 'next/navigation'
+
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
 import { PropertyManager } from '@/components/properties/property-manager'
+import { getCurrentUser } from '@/lib/server/auth/current-user'
 
-export default function DashboardPropertiesPage() {
+export default async function DashboardPropertiesPage() {
+  const user = await getCurrentUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  if (user.role !== 'admin' && user.accountType !== 'agent' && user.accountType !== 'landlord') {
+    redirect('/dashboard')
+  }
+
   return (
     <DashboardLayout>
       <PropertyManager mode="dashboard" />

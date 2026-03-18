@@ -23,6 +23,7 @@ export type Property = {
   type: PropertyType
   listedBy: PropertyPosterType
   views?: number
+  isSaved?: boolean
   badges?: string[]
   originalPrice?: string
   discount?: string

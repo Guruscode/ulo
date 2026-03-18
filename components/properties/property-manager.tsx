@@ -203,6 +203,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
   const [formStep, setFormStep] = useState(0)
   const [subscriptionChoice, setSubscriptionChoice] = useState<'free' | 'basic' | 'premium'>('free')
   const [form, setForm] = useState<PropertyFormState>(EMPTY_FORM)
+  const [actingPropertyId, setActingPropertyId] = useState<string | null>(null)
 
   const steps =
     mode === 'dashboard'
@@ -286,6 +287,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
   }
 
   const handleDelete = async (property: PropertyRecord) => {
+    if (actingPropertyId) return
+    setActingPropertyId(property.id)
     try {
       await deletePropertyRequest(property.id)
       toast.success('Property deleted.')
@@ -294,10 +297,14 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
       const message =
         error instanceof ApiClientError ? error.message : 'Unable to delete the property right now.'
       toast.error(message)
+    } finally {
+      setActingPropertyId(null)
     }
   }
 
   const handleApproval = async (property: PropertyRecord, approvalStatus: 'approved' | 'rejected') => {
+    if (actingPropertyId) return
+    setActingPropertyId(property.id)
     try {
       await updatePropertyApprovalRequest(property.id, {
         approvalStatus,
@@ -309,6 +316,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
       const message =
         error instanceof ApiClientError ? error.message : 'Unable to update approval right now.'
       toast.error(message)
+    } finally {
+      setActingPropertyId(null)
     }
   }
 
@@ -437,16 +446,17 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                     <Eye className="mr-2 h-4 w-4" />
                     View
                   </Button>
-                  <Button variant="outline" onClick={() => openEditForm(property)}>
+                  <Button variant="outline" disabled={Boolean(actingPropertyId)} onClick={() => openEditForm(property)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                   </Button>
                   {mode === 'admin' && property.approvalStatus !== 'approved' ? (
                     <Button
                       className="bg-emerald-600 text-white hover:bg-emerald-700"
+                      disabled={Boolean(actingPropertyId)}
                       onClick={() => void handleApproval(property, 'approved')}
                     >
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {actingPropertyId === property.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                       Approve
                     </Button>
                   ) : null}
@@ -454,18 +464,20 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                     <Button
                       variant="outline"
                       className="border-red-200 text-red-600 hover:bg-red-50"
+                      disabled={Boolean(actingPropertyId)}
                       onClick={() => void handleApproval(property, 'rejected')}
                     >
-                      <XCircle className="mr-2 h-4 w-4" />
+                      {actingPropertyId === property.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
                       Reject
                     </Button>
                   ) : null}
                   <Button
                     variant="outline"
                     className="border-red-200 text-red-600 hover:bg-red-50"
+                    disabled={Boolean(actingPropertyId)}
                     onClick={() => void handleDelete(property)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    {actingPropertyId === property.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                     Delete
                   </Button>
                 </div>
@@ -727,22 +739,22 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
           ) : null}
 
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-            <Button variant="outline" onClick={handleCloseForm}>
+            <Button variant="outline" onClick={handleCloseForm} disabled={saving}>
               Cancel
             </Button>
             <div className="flex gap-2">
               {formStep > 0 ? (
-                <Button variant="outline" onClick={() => setFormStep((step) => step - 1)}>
+                <Button variant="outline" onClick={() => setFormStep((step) => step - 1)} disabled={saving}>
                   Back
                 </Button>
               ) : null}
               {formStep < steps.length - 1 ? (
-                <Button onClick={() => setFormStep((step) => step + 1)} disabled={!canGoNext}>
+                <Button onClick={() => setFormStep((step) => step + 1)} disabled={!canGoNext || saving}>
                   Next
                 </Button>
               ) : (
                 <Button onClick={() => void handleSubmit()} disabled={saving}>
-                  {saving ? 'Saving...' : editingProperty ? 'Save Property' : 'Create Property'}
+                  {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : editingProperty ? 'Save Property' : 'Create Property'}
                 </Button>
               )}
             </div>

@@ -2345,6 +2345,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/nodemailer@npm:^7.0.11":
+  version: 7.0.11
+  resolution: "@types/nodemailer@npm:7.0.11"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/dc6472c26600e763c38721b0691fc3014eb868d20b97eb48cfbc4fe9a7a09f66c0ccd8d647033a4be91051cc3c7bdca73c006db2f7a9e8bdd1ce65bb5ec2599c
+  languageName: node
+  linkType: hard
+
 "@types/react-dom@npm:^19":
   version: 19.2.3
   resolution: "@types/react-dom@npm:19.2.3"
@@ -3608,6 +3617,7 @@ __metadata:
     "@radix-ui/react-tooltip": "npm:1.1.6"
     "@tailwindcss/postcss": "npm:^4.1.13"
     "@types/node": "npm:^22"
+    "@types/nodemailer": "npm:^7.0.11"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
     autoprefixer: "npm:^10.4.20"
@@ -3623,6 +3633,7 @@ __metadata:
     lucide-react: "npm:^0.544.0"
     next: "npm:16.1.6"
     next-themes: "npm:^0.4.6"
+    nodemailer: "npm:^8.0.2"
     postcss: "npm:^8.5"
     react: "npm:^19"
     react-day-picker: "npm:8.10.1"
@@ -3793,6 +3804,13 @@ __metadata:
   version: 2.0.27
   resolution: "node-releases@npm:2.0.27"
   checksum: 10c0/f1e6583b7833ea81880627748d28a3a7ff5703d5409328c216ae57befbced10ce2c991bea86434e8ec39003bd017f70481e2e5f8c1f7e0a7663241f81d6e00e2
+  languageName: node
+  linkType: hard
+
+"nodemailer@npm:^8.0.2":
+  version: 8.0.2
+  resolution: "nodemailer@npm:8.0.2"
+  checksum: 10c0/e11a3c6cfd314cee61a9fbefa7f3d5c7caec783072e6aea277b718cf1d4f54a90b85eb32445e15cf63f92d70d7ac1c4b8e1de991ecce1907d8436193e0873189
   languageName: node
   linkType: hard
 

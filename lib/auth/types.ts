@@ -1,11 +1,23 @@
 export type UserRole = 'user' | 'admin'
+export type AccountType = 'user' | 'agent' | 'landlord' | 'hotel_manager'
+export type IdentityType = 'nin' | 'bvn'
+export type AccountStatus = 'active' | 'disabled'
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
 
 export interface AuthUser {
   id: string
   name: string
   email: string
   role: UserRole
+  accountType?: AccountType
+  status?: AccountStatus
+  approvalStatus?: ApprovalStatus
   phone?: string | null
+  address?: string | null
+  state?: string | null
+  localGovernment?: string | null
+  identityType?: IdentityType | null
+  identityNumber?: string | null
   timezone?: string | null
   emailNotifications?: boolean
   pushNotifications?: boolean

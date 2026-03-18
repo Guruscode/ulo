@@ -6,13 +6,33 @@ type AuthPayload = {
   redirectPath: string
 }
 
+export type SignupOtpRequestPayload = {
+  verificationToken: string
+  email: string
+  expiresInMinutes: number
+}
+
 export function signupRequest(input: {
   name: string
   email: string
+  phone: string
+  address: string
+  state: string
+  localGovernment: string
+  accountType: 'user' | 'agent' | 'landlord' | 'hotel_manager'
+  identityType?: 'nin' | 'bvn' | null
+  identityNumber?: string | null
   password: string
   agreeToTerms: boolean
 }) {
-  return apiRequest<AuthPayload>('/api/auth/signup', {
+  return apiRequest<SignupOtpRequestPayload>('/api/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function verifySignupOtpRequest(input: { verificationToken: string; otp: string }) {
+  return apiRequest<AuthPayload>('/api/auth/signup/verify-otp', {
     method: 'POST',
     body: JSON.stringify(input),
   })

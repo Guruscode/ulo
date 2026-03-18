@@ -10,12 +10,18 @@ import type {
   PropertyUpsertInput,
 } from '@/lib/properties/types'
 import { ApiError } from '@/lib/server/http/api-error'
+import { sendPropertyApprovalEmail, sendPropertyCreatedEmails } from '@/lib/server/mail/notifications'
 import {
   countProperties,
   createProperty,
   deleteProperty,
   findPropertyById,
+  findPropertyByIdForViewer,
   listProperties,
+  listSavedPropertiesForUser,
+  recordPropertyView,
+  removeSavedPropertyForUser,
+  savePropertyForUser,
   updateProperty,
   updatePropertyApproval,
 } from '@/lib/server/properties/repository'
@@ -118,6 +124,22 @@ function ensurePropertyAccess(property: PropertyRecord | null, actor: AuthUser |
   throw new ApiError(403, 'FORBIDDEN', 'You do not have access to this property.')
 }
 
+function ensureCanPublish(actor: AuthUser) {
+  if (actor.role === 'admin') return
+
+  if (actor.accountType === 'user') {
+    throw new ApiError(403, 'LISTING_NOT_ALLOWED', 'Standard users cannot create property listings.')
+  }
+
+  if (actor.status !== 'active') {
+    throw new ApiError(403, 'ACCOUNT_DISABLED', 'Your account is disabled.')
+  }
+
+  if (actor.approvalStatus !== 'approved') {
+    throw new ApiError(403, 'ACCOUNT_PENDING_APPROVAL', 'Your account must be approved before listing properties.')
+  }
+}
+
 function buildReferenceCode(input: PropertyUpsertInput) {
   if (input.referenceCode?.trim()) {
     return input.referenceCode.trim().toUpperCase()
@@ -177,15 +199,16 @@ export async function listPropertiesForScope(scope: PropertyScope, filters: Prop
     return listProperties('admin', filters)
   }
 
-  return listProperties('public', filters)
+  return listProperties('public', filters, actor?.id)
 }
 
 export async function getPropertyForActor(id: string, actor?: AuthUser | null) {
-  const property = await findPropertyById(id)
+  const property = await findPropertyByIdForViewer(id, actor?.id)
   return ensurePropertyAccess(property, actor ?? null)
 }
 
 export async function createPropertyForActor(input: unknown, actor: AuthUser) {
+  ensureCanPublish(actor)
   const normalized = normalizeUpsertInput(input)
   const approvalStatus: PropertyApprovalStatus = actor.role === 'admin' ? 'approved' : 'pending_review'
   const now = new Date().toISOString()
@@ -218,10 +241,39 @@ export async function createPropertyForActor(input: unknown, actor: AuthUser) {
     throw new ApiError(500, 'PROPERTY_CREATE_FAILED', 'Unable to create property.')
   }
 
+  await sendPropertyCreatedEmails(property)
   return property
 }
 
+export async function listSavedProperties(actor: AuthUser) {
+  return listSavedPropertiesForUser(actor.id)
+}
+
+export async function saveProperty(actor: AuthUser, propertyId: string) {
+  const property = await findPropertyById(propertyId)
+  if (!property || property.approvalStatus !== 'approved' || property.status !== 'active') {
+    throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found.')
+  }
+  await savePropertyForUser({ id: randomUUID(), userId: actor.id, propertyId })
+}
+
+export async function unsaveProperty(actor: AuthUser, propertyId: string) {
+  await removeSavedPropertyForUser(actor.id, propertyId)
+}
+
+export async function trackPropertyView(propertyId: string, actor?: AuthUser | null, viewerSessionKey?: string | null) {
+  const property = await findPropertyById(propertyId)
+  if (!property) return
+  await recordPropertyView({
+    id: randomUUID(),
+    propertyId,
+    viewerUserId: actor?.id ?? null,
+    viewerSessionKey: viewerSessionKey ?? null,
+  })
+}
+
 export async function updatePropertyForActor(id: string, input: unknown, actor: AuthUser) {
+  ensureCanPublish(actor)
   const normalized = normalizeUpsertInput(input)
   const existing = await findPropertyById(id)
 
@@ -312,5 +364,8 @@ export async function setPropertyApprovalForAdmin(
     throw new ApiError(500, 'PROPERTY_APPROVAL_FAILED', 'Unable to update property approval.')
   }
 
+  if (approvalStatus === 'approved' || approvalStatus === 'rejected') {
+    await sendPropertyApprovalEmail(property)
+  }
   return property
 }

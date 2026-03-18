@@ -51,6 +51,8 @@ export interface PropertyRecord {
   approvedByUserId: string | null
   approvedAt: string | null
   rejectionReason: string | null
+  viewsCount?: number
+  isSaved?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -93,4 +95,3 @@ export interface PropertyUpsertInput {
   status: PropertyStatus
   featured?: boolean
 }
-

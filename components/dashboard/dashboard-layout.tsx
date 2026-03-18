@@ -60,6 +60,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const { user, logout } = useAuth()
   const displayName = user?.name || 'User'
+  const canManageProperties = user?.role === 'admin' || user?.accountType === 'agent' || user?.accountType === 'landlord'
+  const canManageHotels = user?.role === 'admin' || user?.accountType === 'agent' || user?.accountType === 'hotel_manager'
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.id === 'properties') return canManageProperties
+    if (item.id === 'hotels') return canManageHotels
+    return true
+  })
 
   const handleSignOut = async () => {
     try {
@@ -105,7 +112,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Navigation */}
       <div className="flex-1 py-4 px-3 overflow-y-auto">
         <div className="space-y-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
             return (

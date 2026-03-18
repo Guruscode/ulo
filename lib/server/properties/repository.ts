@@ -62,6 +62,8 @@ function mapPropertyRow(row: ResultSet['rows'][number]): PropertyRecord {
     approvedByUserId: row.approved_by_user_id ? String(row.approved_by_user_id) : null,
     approvedAt: row.approved_at ? String(row.approved_at) : null,
     rejectionReason: row.rejection_reason ? String(row.rejection_reason) : null,
+    viewsCount: Number(row.views_count ?? 0),
+    isSaved: Number(row.is_saved ?? 0) === 1,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   }
@@ -108,7 +110,15 @@ function buildListQuery(scope: PropertyScope, filters: PropertyListFilters) {
   return { whereClause, args, limitClause }
 }
 
-function baseSelectSql() {
+function baseSelectSql(currentUserId?: string | null) {
+  const savedJoin = currentUserId
+    ? `
+      LEFT JOIN saved_properties sp
+        ON sp.property_id = p.id
+       AND sp.user_id = '${currentUserId.replace(/'/g, "''")}'
+    `
+    : ''
+
   return `
     SELECT
       p.id,
@@ -148,10 +158,14 @@ function baseSelectSql() {
       p.approved_by_user_id,
       p.approved_at,
       p.rejection_reason,
+      COUNT(DISTINCT pv.id) AS views_count,
+      ${currentUserId ? `CASE WHEN sp.id IS NULL THEN 0 ELSE 1 END` : '0'} AS is_saved,
       p.created_at,
       p.updated_at
     FROM properties p
     LEFT JOIN users u ON u.id = p.created_by_user_id
+    LEFT JOIN property_views pv ON pv.property_id = p.id
+    ${savedJoin}
   `
 }
 
@@ -175,8 +189,9 @@ export async function listProperties(scope: PropertyScope, filters: PropertyList
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
   const result = await db.execute({
     sql: `
-      ${baseSelectSql()}
+      ${baseSelectSql(userId ?? null)}
       ${whereClause}
+      GROUP BY p.id
       ORDER BY
         CASE WHEN p.approval_status = 'pending_review' THEN 0 ELSE 1 END,
         p.featured DESC,
@@ -197,6 +212,7 @@ export async function findPropertyById(id: string) {
     sql: `
       ${baseSelectSql()}
       WHERE p.id = ?
+      GROUP BY p.id
       LIMIT 1
     `,
     args: [id],
@@ -204,6 +220,73 @@ export async function findPropertyById(id: string) {
 
   const row = result.rows[0]
   return row ? mapPropertyRow(row) : null
+}
+
+export async function findPropertyByIdForViewer(id: string, userId?: string | null) {
+  await initializeDatabase()
+
+  const db = getDbClient()
+  const result = await db.execute({
+    sql: `
+      ${baseSelectSql(userId ?? null)}
+      WHERE p.id = ?
+      GROUP BY p.id
+      LIMIT 1
+    `,
+    args: [id],
+  })
+
+  const row = result.rows[0]
+  return row ? mapPropertyRow(row) : null
+}
+
+export async function recordPropertyView(input: { id: string; propertyId: string; viewerUserId?: string | null; viewerSessionKey?: string | null }) {
+  await initializeDatabase()
+  const db = getDbClient()
+  await db.execute({
+    sql: `
+      INSERT INTO property_views (id, property_id, viewer_user_id, viewer_session_key, created_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `,
+    args: [input.id, input.propertyId, input.viewerUserId ?? null, input.viewerSessionKey ?? null],
+  })
+}
+
+export async function savePropertyForUser(input: { id: string; userId: string; propertyId: string }) {
+  await initializeDatabase()
+  const db = getDbClient()
+  await db.execute({
+    sql: `
+      INSERT OR IGNORE INTO saved_properties (id, user_id, property_id, created_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    `,
+    args: [input.id, input.userId, input.propertyId],
+  })
+}
+
+export async function removeSavedPropertyForUser(userId: string, propertyId: string) {
+  await initializeDatabase()
+  const db = getDbClient()
+  await db.execute({
+    sql: `DELETE FROM saved_properties WHERE user_id = ? AND property_id = ?`,
+    args: [userId, propertyId],
+  })
+}
+
+export async function listSavedPropertiesForUser(userId: string) {
+  await initializeDatabase()
+  const db = getDbClient()
+  const result = await db.execute({
+    sql: `
+      ${baseSelectSql(userId)}
+      INNER JOIN saved_properties s ON s.property_id = p.id
+      WHERE s.user_id = ?
+      GROUP BY p.id
+      ORDER BY s.created_at DESC
+    `,
+    args: [userId],
+  })
+  return result.rows.map(mapPropertyRow)
 }
 
 export async function createProperty(input: PropertyRecord) {
@@ -436,4 +519,3 @@ export async function countProperties() {
   const result = await db.execute(`SELECT COUNT(*) AS count FROM properties`)
   return Number(result.rows[0]?.count ?? 0)
 }
-

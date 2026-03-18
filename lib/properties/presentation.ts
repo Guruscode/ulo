@@ -39,6 +39,8 @@ export function toHomeProperty(property: PropertyRecord): Property {
     type: property.type,
     listedBy: property.listedBy,
     estate: property.estate || undefined,
+    views: property.viewsCount ?? 0,
+    isSaved: property.isSaved ?? false,
     description: property.description,
     features: property.features,
     yearBuilt: property.yearBuilt,

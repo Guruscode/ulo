@@ -7,30 +7,44 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Landmark, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useAuth } from '@/components/providers/auth-provider'
 import { ApiClientError } from '@/lib/client/api-error'
+import { signupRequest, verifySignupOtpRequest } from '@/lib/client/auth-client'
 
 export default function SignupPageClient() {
   const router = useRouter()
-  const { signup } = useAuth()
+  const { setUser } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [step, setStep] = useState<'details' | 'otp'>('details')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
+    address: '',
+    state: '',
+    localGovernment: '',
+    accountType: 'user',
+    identityType: 'nin',
+    identityNumber: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false,
   })
+  const [verificationToken, setVerificationToken] = useState('')
+  const [otp, setOtp] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.currentTarget
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.currentTarget
+    const checked =
+      e.currentTarget instanceof HTMLInputElement ? e.currentTarget.checked : false
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -54,18 +68,55 @@ export default function SignupPageClient() {
     setIsLoading(true)
 
     try {
-      const response = await signup({
+      const response = await signupRequest({
         name: formData.name,
         email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        state: formData.state,
+        localGovernment: formData.localGovernment,
+        accountType: formData.accountType as 'user' | 'agent' | 'landlord' | 'hotel_manager',
+        identityType:
+          formData.accountType === 'user'
+            ? null
+            : (formData.identityType as 'nin' | 'bvn'),
+        identityNumber: formData.accountType === 'user' ? null : formData.identityNumber,
         password: formData.password,
         agreeToTerms: formData.agreeToTerms,
       })
+      setVerificationToken(response.verificationToken)
+      setStep('otp')
+      toast.success(`Verification code sent to ${response.email}.`)
+    } catch (err) {
+      const message =
+        err instanceof ApiClientError ? err.message : 'Unable to send your verification code right now.'
+      setError(message)
+      toast.error(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (otp.length !== 6) {
+      setError('Enter the 6-digit verification code.')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const response = await verifySignupOtpRequest({ verificationToken, otp })
+      setUser(response.user)
       toast.success('Account created successfully.')
       router.push(response.redirectPath)
       router.refresh()
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : 'Unable to create your account right now.'
+        err instanceof ApiClientError ? err.message : 'Unable to verify your code right now.'
       setError(message)
       toast.error(message)
     } finally {
@@ -102,67 +153,172 @@ export default function SignupPageClient() {
 
         <div className="w-full max-w-md mx-auto">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-500 mb-8">Join us and start managing properties</p>
+          <p className="text-gray-500 mb-8">
+            {step === 'details'
+              ? 'Join us and start managing properties'
+              : `Enter the code sent to ${formData.email}`}
+          </p>
 
-          <form onSubmit={handleSignup} className="space-y-5">
+          <form onSubmit={step === 'details' ? handleSignup : handleVerifyOtp} className="space-y-5">
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                 {error}
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-              <Input type="text" name="name" placeholder="John Doe" value={formData.name} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
-            </div>
+            {step === 'details' ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                  <Input type="text" name="name" placeholder="John Doe" value={formData.name} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-              <Input type="email" name="email" placeholder="you@example.com" value={formData.email} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                  <Input type="email" name="email" placeholder="you@example.com" value={formData.email} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <div className="relative">
-                <Input type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••" value={formData.password} onChange={handleInputChange} required className="h-11 pr-10 bg-gray-50 border-gray-200 focus:bg-white" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">Minimum 8 characters with uppercase, lowercase, and numbers</p>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                  <Input type="tel" name="phone" placeholder="+234..." value={formData.phone} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-              <div className="relative">
-                <Input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" placeholder="••••••••" value={formData.confirmPassword} onChange={handleInputChange} required className="h-11 pr-10 bg-gray-50 border-gray-200 focus:bg-white" />
-                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">House Address</label>
+                  <Input type="text" name="address" placeholder="Your house address" value={formData.address} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                </div>
 
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="terms"
-                name="agreeToTerms"
-                checked={formData.agreeToTerms}
-                onCheckedChange={(checked) =>
-                  setFormData((prev) => ({ ...prev, agreeToTerms: checked as boolean }))
-                }
-                className="mt-1 border-gray-300"
-              />
-              <label htmlFor="terms" className="text-sm text-gray-600 cursor-pointer">
-                I agree to the{' '}
-                <Link href="#" className="text-gray-900 hover:underline">Terms & Conditions</Link>{' '}
-                and{' '}
-                <Link href="#" className="text-gray-900 hover:underline">Privacy Policy</Link>
-              </label>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                    <Input type="text" name="state" placeholder="Lagos" value={formData.state} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Local Government</label>
+                    <Input type="text" name="localGovernment" placeholder="Ikeja" value={formData.localGovernment} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                  </div>
+                </div>
 
-            <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white font-medium text-base rounded-lg">
-              {isLoading ? 'Creating account...' : 'Create Account'}
-            </Button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
+                  <select
+                    name="accountType"
+                    value={formData.accountType}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        accountType: event.target.value,
+                        identityNumber: event.target.value === 'user' ? '' : prev.identityNumber,
+                      }))
+                    }
+                    className="h-11 w-full rounded-md border border-gray-200 bg-gray-50 px-3 text-sm focus:bg-white"
+                  >
+                    <option value="user">User</option>
+                    <option value="agent">Agent</option>
+                    <option value="landlord">Landlord</option>
+                    <option value="hotel_manager">Hotel Manager</option>
+                  </select>
+                </div>
+
+                {formData.accountType !== 'user' ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Means of Identity</label>
+                      <select
+                        name="identityType"
+                        value={formData.identityType}
+                        onChange={handleInputChange}
+                        className="h-11 w-full rounded-md border border-gray-200 bg-gray-50 px-3 text-sm focus:bg-white"
+                      >
+                        <option value="nin">NIN</option>
+                        <option value="bvn">BVN</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Identity Number</label>
+                      <Input type="text" name="identityNumber" placeholder="Enter identity number" value={formData.identityNumber} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                    </div>
+                  </div>
+                ) : null}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <div className="relative">
+                    <Input type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••" value={formData.password} onChange={handleInputChange} required className="h-11 pr-10 bg-gray-50 border-gray-200 focus:bg-white" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Minimum 8 characters with uppercase, lowercase, and numbers</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                  <div className="relative">
+                    <Input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" placeholder="••••••••" value={formData.confirmPassword} onChange={handleInputChange} required className="h-11 pr-10 bg-gray-50 border-gray-200 focus:bg-white" />
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="terms"
+                    name="agreeToTerms"
+                    checked={formData.agreeToTerms}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({ ...prev, agreeToTerms: checked as boolean }))
+                    }
+                    className="mt-1 border-gray-300"
+                  />
+                  <label htmlFor="terms" className="text-sm text-gray-600 cursor-pointer">
+                    I agree to the{' '}
+                    <Link href="#" className="text-gray-900 hover:underline">Terms & Conditions</Link>{' '}
+                    and{' '}
+                    <Link href="#" className="text-gray-900 hover:underline">Privacy Policy</Link>
+                  </label>
+                </div>
+
+                <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white font-medium text-base rounded-lg">
+                  {isLoading ? 'Sending code...' : 'Send Verification Code'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Verification Code</label>
+                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                    <InputOTPGroup className="w-full justify-between">
+                      <InputOTPSlot index={0} className="h-12 w-12 rounded-md border" />
+                      <InputOTPSlot index={1} className="h-12 w-12 rounded-md border" />
+                      <InputOTPSlot index={2} className="h-12 w-12 rounded-md border" />
+                      <InputOTPSlot index={3} className="h-12 w-12 rounded-md border" />
+                      <InputOTPSlot index={4} className="h-12 w-12 rounded-md border" />
+                      <InputOTPSlot index={5} className="h-12 w-12 rounded-md border" />
+                    </InputOTPGroup>
+                  </InputOTP>
+                  <p className="mt-3 text-sm text-gray-500">Enter the 6-digit code sent to your email.</p>
+                </div>
+
+                <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white font-medium text-base rounded-lg">
+                  {isLoading ? 'Verifying...' : 'Verify and Create Account'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 rounded-lg"
+                  onClick={() => {
+                    setStep('details')
+                    setOtp('')
+                    setError('')
+                  }}
+                >
+                  Change Details
+                </Button>
+              </>
+            )}
           </form>
 
           <div className="relative my-8">

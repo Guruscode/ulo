@@ -16,6 +16,7 @@ import {
 import { motion } from 'framer-motion'
 
 import HomeNav from '@/components/home/home-nav'
+import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -30,16 +31,17 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { ApiClientError } from '@/lib/client/api-error'
-import { getPropertyRequest } from '@/lib/client/properties-client'
+import { getPropertyRequest, savePropertyRequest, unsavePropertyRequest } from '@/lib/client/properties-client'
 import { formatPropertyPrice } from '@/lib/properties/presentation'
 import type { PropertyRecord } from '@/lib/properties/types'
+import { toast } from 'sonner'
 
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [property, setProperty] = useState<PropertyRecord | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isFavorited, setIsFavorited] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const { isAuthenticated } = useAuth()
 
   useEffect(() => {
     const loadProperty = async () => {
@@ -128,9 +130,25 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
               <p className="text-4xl font-bold text-primary">{formatPropertyPrice(property)}</p>
             </div>
             <div className="flex gap-3 md:flex-col">
-              <button onClick={() => setIsFavorited(!isFavorited)} className={`w-full px-4 py-3 rounded-lg font-medium transition-all ${isFavorited ? 'bg-primary text-white hover:bg-primary/90' : 'bg-secondary/10 text-foreground hover:bg-secondary/20'}`}>
+              <button
+                onClick={() => {
+                  if (!property) return
+                  if (!isAuthenticated) {
+                    window.location.href = '/login'
+                    return
+                  }
+                  const nextSaved = !property.isSaved
+                  setProperty({ ...property, isSaved: nextSaved })
+                  const request = nextSaved ? savePropertyRequest(property.id) : unsavePropertyRequest(property.id)
+                  void request.catch(() => {
+                    setProperty({ ...property, isSaved: !nextSaved })
+                    toast.error('Unable to update saved property right now.')
+                  })
+                }}
+                className={`w-full px-4 py-3 rounded-lg font-medium transition-all ${property.isSaved ? 'bg-primary text-white hover:bg-primary/90' : 'bg-secondary/10 text-foreground hover:bg-secondary/20'}`}
+              >
                 <Heart className="w-5 h-5 inline mr-2" />
-                {isFavorited ? 'Saved' : 'Save'}
+                {property.isSaved ? 'Saved' : 'Save'}
               </button>
               <button className="px-4 py-3 rounded-lg bg-secondary/10 text-foreground hover:bg-secondary/20 font-medium transition-all">
                 <Share2 className="w-5 h-5 inline mr-2" />
@@ -148,7 +166,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Posted By</p><p className="text-xl font-bold text-foreground">{listedByLabel}</p><p className="text-sm text-foreground/70 mt-2">This listing was submitted by a {listedByLabel.toLowerCase()} on the platform.</p></Card>
-            <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Property Type</p><p className="text-xl font-bold text-foreground">{property.type}</p><p className="text-sm text-foreground/70 mt-2">Approval status: {property.approvalStatus.replace('_', ' ')}.</p></Card>
+            <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Property Type</p><p className="text-xl font-bold text-foreground">{property.type}</p><p className="text-sm text-foreground/70 mt-2">Approval status: {property.approvalStatus.replace('_', ' ')}. {property.viewsCount ?? 0} views.</p></Card>
             <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Estate / Area</p><p className="text-xl font-bold text-foreground">{property.estate || property.location}</p><p className="text-sm text-foreground/70 mt-2">Reference code: {property.referenceCode}</p></Card>
           </div>
 

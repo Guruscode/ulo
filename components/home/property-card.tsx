@@ -5,7 +5,10 @@ import React from "react"
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
+import { useAuth } from '@/components/providers/auth-provider'
+import { savePropertyRequest, unsavePropertyRequest } from '@/lib/client/properties-client'
 import { Building2, Eye, Flame, Heart, MapPin, Sparkles, Star } from 'lucide-react'
+import { toast } from 'sonner'
 import type { Property } from '@/components/home/types'
 
 type PropertyCardProps = {
@@ -14,6 +17,8 @@ type PropertyCardProps = {
 
 export default function PropertyCard({ property }: PropertyCardProps) {
   const router = useRouter()
+  const { isAuthenticated } = useAuth()
+  const [isSaved, setIsSaved] = React.useState(Boolean(property.isSaved))
   const isOnSale = property.badges?.includes('on-sale')
   const isHot = property.badges?.includes('hot')
   const isTrending = property.badges?.includes('trending')
@@ -24,7 +29,22 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const handleHeartClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     e.stopPropagation()
-    router.push('/login')
+    if (!isAuthenticated) {
+      router.push('/login')
+      return
+    }
+
+    const nextSaved = !isSaved
+    setIsSaved(nextSaved)
+    const request = nextSaved ? savePropertyRequest(property.id) : unsavePropertyRequest(property.id)
+    void request
+      .then(() => {
+        toast.success(nextSaved ? 'Property saved.' : 'Property removed from saved.')
+      })
+      .catch(() => {
+        setIsSaved(!nextSaved)
+        toast.error('Unable to update saved property right now.')
+      })
   }
 
   return (
@@ -81,7 +101,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             onClick={handleHeartClick}
             className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-transform z-10 cursor-pointer"
           >
-            <Heart className="w-5 h-5 text-gray-700" />
+            <Heart className={`w-5 h-5 ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
           </button>
 
           {property.views && (

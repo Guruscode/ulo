@@ -4,17 +4,21 @@ import { requireAuthenticatedUser } from '@/lib/server/auth/request-auth'
 import {
   deletePropertyForActor,
   getPropertyForActor,
+  trackPropertyView,
   updatePropertyForActor,
 } from '@/lib/server/properties/service'
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   return withApiHandler(async () => {
     const { id } = await params
     const actor = await getCurrentUser()
     const property = await getPropertyForActor(id, actor)
+    const forwardedFor = request.headers.get('x-forwarded-for') || ''
+    const userAgent = request.headers.get('user-agent') || ''
+    await trackPropertyView(id, actor, `${forwardedFor}:${userAgent}`.slice(0, 255))
 
     return apiSuccess({ property })
   })

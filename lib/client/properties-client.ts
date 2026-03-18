@@ -30,6 +30,24 @@ export function getPropertyRequest(id: string) {
   })
 }
 
+export function listSavedPropertiesRequest() {
+  return apiRequest<{ properties: PropertyRecord[] }>('/api/properties/saved', {
+    method: 'GET',
+  })
+}
+
+export function savePropertyRequest(id: string) {
+  return apiRequest<{ success: true }>(`/api/properties/${id}/save`, {
+    method: 'POST',
+  })
+}
+
+export function unsavePropertyRequest(id: string) {
+  return apiRequest<{ success: true }>(`/api/properties/${id}/save`, {
+    method: 'DELETE',
+  })
+}
+
 export function createPropertyRequest(input: PropertyUpsertInput) {
   return apiRequest<{ property: PropertyRecord }>('/api/properties', {
     method: 'POST',

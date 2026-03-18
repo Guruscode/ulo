@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 import type { AuthUser } from '@/lib/auth/types'
 import { ApiClientError } from '@/lib/client/api-error'
-import { loginRequest, logoutRequest, meRequest, signupRequest } from '@/lib/client/auth-client'
+import { loginRequest, logoutRequest, meRequest } from '@/lib/client/auth-client'
 
 type AuthContextValue = {
   user: AuthUser | null
@@ -13,12 +13,6 @@ type AuthContextValue = {
   setUser: (user: AuthUser | null) => void
   refreshSession: () => Promise<AuthUser | null>
   login: (input: { email: string; password: string }) => Promise<{ user: AuthUser; redirectPath: string }>
-  signup: (input: {
-    name: string
-    email: string
-    password: string
-    agreeToTerms: boolean
-  }) => Promise<{ user: AuthUser; redirectPath: string }>
   logout: () => Promise<void>
 }
 
@@ -58,11 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refreshSession,
       login: async (input) => {
         const response = await loginRequest(input)
-        setUser(response.user)
-        return response
-      },
-      signup: async (input) => {
-        const response = await signupRequest(input)
         setUser(response.user)
         return response
       },
