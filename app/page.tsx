@@ -2,27 +2,27 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+
+import EstateSection from '@/components/home/estate-section'
+import HeroServices from '@/components/home/hero-services'
 import HomeFooter from '@/components/home/home-footer'
 import HomeHero from '@/components/home/home-hero'
 import HomeNav from '@/components/home/home-nav'
 import HomeProperties from '@/components/home/home-properties'
-import HeroServices from '@/components/home/hero-services'
-import RecommendationsCta from '@/components/home/recommendations-cta'
-import RecommendedProperties from '@/components/home/recommended-properties'
 import NeighbourhoodGuide from '@/components/home/neighbourhood-guide'
-import EstateSection from '@/components/home/estate-section'
 import type { CurrencyFilter, Property, QuickType } from '@/components/home/types'
-import { homeProperties } from '@/lib/home-properties'
+import { usePublicHomeProperties } from '@/components/properties/use-public-home-properties'
 import { homeEstates } from '@/lib/home-estates'
 
 export default function Homepage() {
   const router = useRouter()
+  const { properties } = usePublicHomeProperties()
   const [locationFilter, setLocationFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('All Types')
   const [priceRangeFilter, setPriceRangeFilter] = useState('Any Price')
   const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>('Any')
   const [quickType, setQuickType] = useState<QuickType>('All')
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>(homeProperties)
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([])
 
   const handleCurrencyChange = (value: CurrencyFilter) => {
     setCurrencyFilter(value)
@@ -30,56 +30,39 @@ export default function Homepage() {
   }
 
   const handleSearch = () => {
-    // Build query params
     const params = new URLSearchParams()
     if (locationFilter.trim()) params.set('location', locationFilter.trim())
     if (typeFilter !== 'All Types') params.set('type', typeFilter)
     if (currencyFilter !== 'Any') params.set('currency', currencyFilter)
     if (priceRangeFilter !== 'Any Price') params.set('priceRange', priceRangeFilter)
-
-    // Navigate to listings page with params
     router.push(`/listings?${params.toString()}`)
   }
 
   useEffect(() => {
-    let result = [...homeProperties]
+    let result = [...properties]
 
     let effectiveType = typeFilter
     if (quickType !== 'All') {
-      if (quickType === 'Buy' || quickType === 'Sell') {
-        effectiveType = 'For Sale'
-      } else if (quickType === 'Rent') {
-        effectiveType = 'For Rent'
-      } else if (quickType === 'Shortlet') {
-        effectiveType = 'Shortlet'
-      }
+      if (quickType === 'Buy' || quickType === 'Sell') effectiveType = 'For Sale'
+      if (quickType === 'Rent') effectiveType = 'For Rent'
+      if (quickType === 'Shortlet') effectiveType = 'Shortlet'
     }
 
     if (locationFilter.trim()) {
       const term = locationFilter.toLowerCase().trim()
-      result = result.filter(p => p.location.toLowerCase().includes(term))
+      result = result.filter((property) => property.location.toLowerCase().includes(term))
     }
 
     if (effectiveType !== 'All Types') {
-      result = result.filter(p => p.type === effectiveType)
+      result = result.filter((property) => property.type === effectiveType)
     }
 
     if (currencyFilter !== 'Any') {
-      result = result.filter(p => p.currency === currencyFilter)
-    }
-
-    if (priceRangeFilter !== 'Any Price' && currencyFilter !== 'Any') {
-      const ranges = currencyFilter === 'USD' 
-        ? { 'Under $500K': (v: number) => v < 500000, '$500K – $1M': (v: number) => v >= 500000 && v <= 1000000, '$1M – $2M': (v: number) => v > 1000000 && v <= 2000000, '$2M+': (v: number) => v > 2000000 }
-        : { 'Under ₦500K': (v: number) => v < 500000, '₦500K – ₦1M': (v: number) => v >= 500000 && v <= 1000000, '₦1M – ₦2M': (v: number) => v > 1000000 && v <= 2000000, '₦2M+': (v: number) => v > 2000000 }
-      const matcher = ranges[priceRangeFilter as keyof typeof ranges]
-      if (matcher) {
-        result = result.filter(p => matcher(p.priceValue))
-      }
+      result = result.filter((property) => property.currency === currencyFilter)
     }
 
     setFilteredProperties(result)
-  }, [locationFilter, typeFilter, priceRangeFilter, currencyFilter, quickType])
+  }, [currencyFilter, locationFilter, priceRangeFilter, properties, quickType, typeFilter])
 
   return (
     <div className="min-h-screen bg-background">
@@ -97,14 +80,11 @@ export default function Homepage() {
         onQuickTypeChange={setQuickType}
         onSearch={handleSearch}
       />
-      {/* <RecommendationsCta /> */}
       <HeroServices />
-      <HomeProperties allProperties={homeProperties} filteredProperties={filteredProperties} />
-      {/* <RecommendedProperties properties={filteredProperties.length > 0 ? filteredProperties : homeProperties} /> */}
+      <HomeProperties allProperties={properties} filteredProperties={filteredProperties} />
       <NeighbourhoodGuide />
       <EstateSection estates={homeEstates} />
       <HomeFooter />
     </div>
   )
 }
-

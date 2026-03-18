@@ -1,0 +1,316 @@
+import { randomUUID } from 'crypto'
+import { z } from 'zod'
+
+import type { AuthUser } from '@/lib/auth/types'
+import type {
+  PropertyApprovalStatus,
+  PropertyListFilters,
+  PropertyRecord,
+  PropertyScope,
+  PropertyUpsertInput,
+} from '@/lib/properties/types'
+import { ApiError } from '@/lib/server/http/api-error'
+import {
+  countProperties,
+  createProperty,
+  deleteProperty,
+  findPropertyById,
+  listProperties,
+  updateProperty,
+  updatePropertyApproval,
+} from '@/lib/server/properties/repository'
+import { seededProperties } from '@/lib/server/properties/seed-data'
+
+const propertySchema = z.object({
+  title: z.string().trim().min(3, 'Title must be at least 3 characters.'),
+  location: z.string().trim().min(2, 'Location is required.'),
+  fullAddress: z.string().trim().min(5, 'Full address is required.'),
+  estate: z.string().trim().optional().nullable(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  priceValue: z.number().int().positive('Price must be greater than zero.'),
+  currency: z.enum(['USD', 'NGN']),
+  pricingPeriod: z.enum(['one-time', 'month', 'week', 'day']),
+  type: z.enum(['For Sale', 'For Rent', 'Commercial', 'Land', 'Shortlet']),
+  listedBy: z.enum(['Agent', 'Landlord', 'Dealer', 'Owner']),
+  bedrooms: z.number().min(0),
+  bathrooms: z.number().min(0),
+  sqft: z.number().int().positive('Square footage must be greater than zero.'),
+  yearBuilt: z.number().int().min(1900).max(2100).nullable().optional(),
+  features: z.array(z.string().trim().min(1)).min(1, 'Add at least one feature.'),
+  imageUrls: z
+    .array(z.string().trim().url('Each image must be a valid URL.'))
+    .min(4, 'Exactly 4 property images are required.')
+    .max(4, 'Exactly 4 property images are required.'),
+  videoUrl: z.string().trim().url('Video URL must be valid.').nullable().optional().or(z.literal('')),
+  referenceCode: z.string().trim().optional().nullable(),
+  documentInfo: z.string().trim().optional().nullable(),
+  contactName: z.string().trim().min(2, 'Contact name is required.'),
+  contactPhone: z.string().trim().min(7, 'Contact phone is required.'),
+  contactEmail: z.string().trim().email('A valid contact email is required.'),
+  verificationStatus: z.enum(['not_requested', 'requested', 'verified']).optional(),
+  disclaimerAccepted: z.boolean().refine(Boolean, 'You must accept the disclaimer.'),
+  description: z.string().trim().min(20, 'Description must be at least 20 characters.'),
+  status: z.enum(['active', 'sold', 'pending']),
+  featured: z.boolean().optional(),
+})
+
+function normalizeUpsertInput(input: unknown): PropertyUpsertInput {
+  const parsed = propertySchema.safeParse(input)
+
+  if (!parsed.success) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Please correct the property form fields.', parsed.error.flatten())
+  }
+
+  return {
+    title: parsed.data.title,
+    location: parsed.data.location,
+    fullAddress: parsed.data.fullAddress,
+    estate: parsed.data.estate || null,
+    latitude: parsed.data.latitude ?? null,
+    longitude: parsed.data.longitude ?? null,
+    priceValue: parsed.data.priceValue,
+    currency: parsed.data.currency,
+    pricingPeriod: parsed.data.pricingPeriod,
+    type: parsed.data.type,
+    listedBy: parsed.data.listedBy,
+    bedrooms: parsed.data.bedrooms,
+    bathrooms: parsed.data.bathrooms,
+    sqft: parsed.data.sqft,
+    yearBuilt: parsed.data.yearBuilt ?? null,
+    features: parsed.data.features,
+    imageUrls: parsed.data.imageUrls,
+    videoUrl: parsed.data.videoUrl || null,
+    referenceCode: parsed.data.referenceCode || null,
+    documentInfo: parsed.data.documentInfo || null,
+    contactName: parsed.data.contactName,
+    contactPhone: parsed.data.contactPhone,
+    contactEmail: parsed.data.contactEmail,
+    verificationStatus: parsed.data.verificationStatus ?? 'not_requested',
+    featured: parsed.data.featured ?? false,
+    disclaimerAccepted: parsed.data.disclaimerAccepted,
+    description: parsed.data.description,
+    status: parsed.data.status,
+  }
+}
+
+function ensurePropertyAccess(property: PropertyRecord | null, actor: AuthUser | null) {
+  if (!property) {
+    throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found.')
+  }
+
+  if (!actor) {
+    if (property.approvalStatus !== 'approved' || property.status !== 'active') {
+      throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found.')
+    }
+
+    return property
+  }
+
+  if (actor.role === 'admin' || property.createdByUserId === actor.id) {
+    return property
+  }
+
+  if (property.approvalStatus === 'approved' && property.status === 'active') {
+    return property
+  }
+
+  throw new ApiError(403, 'FORBIDDEN', 'You do not have access to this property.')
+}
+
+function buildReferenceCode(input: PropertyUpsertInput) {
+  if (input.referenceCode?.trim()) {
+    return input.referenceCode.trim().toUpperCase()
+  }
+
+  return `ULO-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+}
+
+export async function seedPropertiesIfNeeded() {
+  const currentCount = await countProperties()
+
+  if (currentCount > 0) {
+    return
+  }
+
+  for (const seed of seededProperties) {
+    await createProperty({
+      id: randomUUID(),
+      ...seed,
+      estate: seed.estate ?? null,
+      latitude: seed.latitude ?? null,
+      longitude: seed.longitude ?? null,
+      yearBuilt: seed.yearBuilt ?? null,
+      videoUrl: seed.videoUrl ?? null,
+      documentInfo: seed.documentInfo ?? null,
+      verificationStatus: seed.verificationStatus ?? 'not_requested',
+      featured: seed.featured ?? false,
+      referenceCode: buildReferenceCode(seed),
+      approvalStatus: 'approved',
+      createdByUserId: 'system-seed',
+      createdByName: null,
+      createdByEmail: null,
+      createdByRole: null,
+      approvedByUserId: 'system-seed',
+      approvedAt: new Date().toISOString(),
+      rejectionReason: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+  }
+}
+
+export async function listPropertiesForScope(scope: PropertyScope, filters: PropertyListFilters, actor?: AuthUser | null) {
+  if (scope === 'mine') {
+    if (!actor) {
+      throw new ApiError(401, 'UNAUTHORIZED', 'You are not signed in.')
+    }
+
+    return listProperties('mine', filters, actor.id)
+  }
+
+  if (scope === 'admin') {
+    if (!actor || actor.role !== 'admin') {
+      throw new ApiError(403, 'FORBIDDEN', 'Admin access is required.')
+    }
+
+    return listProperties('admin', filters)
+  }
+
+  return listProperties('public', filters)
+}
+
+export async function getPropertyForActor(id: string, actor?: AuthUser | null) {
+  const property = await findPropertyById(id)
+  return ensurePropertyAccess(property, actor ?? null)
+}
+
+export async function createPropertyForActor(input: unknown, actor: AuthUser) {
+  const normalized = normalizeUpsertInput(input)
+  const approvalStatus: PropertyApprovalStatus = actor.role === 'admin' ? 'approved' : 'pending_review'
+  const now = new Date().toISOString()
+
+  const property = await createProperty({
+    id: randomUUID(),
+    ...normalized,
+    estate: normalized.estate ?? null,
+    latitude: normalized.latitude ?? null,
+    longitude: normalized.longitude ?? null,
+    yearBuilt: normalized.yearBuilt ?? null,
+    videoUrl: normalized.videoUrl ?? null,
+    documentInfo: normalized.documentInfo ?? null,
+    verificationStatus: normalized.verificationStatus ?? 'not_requested',
+    featured: normalized.featured ?? false,
+    referenceCode: buildReferenceCode(normalized),
+    approvalStatus,
+    createdByUserId: actor.id,
+    createdByName: actor.name,
+    createdByEmail: actor.email,
+    createdByRole: actor.role,
+    approvedByUserId: actor.role === 'admin' ? actor.id : null,
+    approvedAt: actor.role === 'admin' ? now : null,
+    rejectionReason: null,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  if (!property) {
+    throw new ApiError(500, 'PROPERTY_CREATE_FAILED', 'Unable to create property.')
+  }
+
+  return property
+}
+
+export async function updatePropertyForActor(id: string, input: unknown, actor: AuthUser) {
+  const normalized = normalizeUpsertInput(input)
+  const existing = await findPropertyById(id)
+
+  if (!existing) {
+    throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found.')
+  }
+
+  if (actor.role !== 'admin' && existing.createdByUserId !== actor.id) {
+    throw new ApiError(403, 'FORBIDDEN', 'You do not have access to update this property.')
+  }
+
+  const nextApprovalStatus: PropertyApprovalStatus =
+    actor.role === 'admin'
+      ? normalized.featured
+        ? existing.approvalStatus
+        : existing.approvalStatus
+      : existing.approvalStatus === 'approved'
+        ? 'pending_review'
+        : existing.approvalStatus === 'rejected'
+          ? 'pending_review'
+          : existing.approvalStatus
+
+  const property = await updateProperty(id, {
+    ...normalized,
+    referenceCode: buildReferenceCode(normalized),
+    approvalStatus: actor.role === 'admin' ? existing.approvalStatus : nextApprovalStatus,
+    approvedByUserId: actor.role === 'admin' ? existing.approvedByUserId : null,
+    approvedAt: actor.role === 'admin' ? existing.approvedAt : null,
+    rejectionReason: actor.role === 'admin' ? existing.rejectionReason : null,
+  })
+
+  if (!property) {
+    throw new ApiError(500, 'PROPERTY_UPDATE_FAILED', 'Unable to update property.')
+  }
+
+  return property
+}
+
+export async function deletePropertyForActor(id: string, actor: AuthUser) {
+  const existing = await findPropertyById(id)
+
+  if (!existing) {
+    throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found.')
+  }
+
+  if (actor.role !== 'admin' && existing.createdByUserId !== actor.id) {
+    throw new ApiError(403, 'FORBIDDEN', 'You do not have access to delete this property.')
+  }
+
+  await deleteProperty(id)
+}
+
+export async function setPropertyApprovalForAdmin(
+  id: string,
+  input: unknown,
+  actor: AuthUser
+) {
+  if (actor.role !== 'admin') {
+    throw new ApiError(403, 'FORBIDDEN', 'Admin access is required.')
+  }
+
+  const parsed = z
+    .object({
+      approvalStatus: z.enum(['approved', 'rejected', 'pending_review']),
+      rejectionReason: z.string().trim().optional().nullable(),
+    })
+    .safeParse(input)
+
+  if (!parsed.success) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Please provide a valid approval update.', parsed.error.flatten())
+  }
+
+  const existing = await findPropertyById(id)
+
+  if (!existing) {
+    throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found.')
+  }
+
+  const approvalStatus = parsed.data.approvalStatus
+  const property = await updatePropertyApproval(id, {
+    approvalStatus,
+    approvedByUserId: approvalStatus === 'approved' ? actor.id : null,
+    approvedAt: approvalStatus === 'approved' ? new Date().toISOString() : null,
+    rejectionReason: approvalStatus === 'rejected' ? parsed.data.rejectionReason || 'Rejected by admin.' : null,
+  })
+
+  if (!property) {
+    throw new ApiError(500, 'PROPERTY_APPROVAL_FAILED', 'Unable to update property approval.')
+  }
+
+  return property
+}

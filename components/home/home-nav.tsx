@@ -3,11 +3,28 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/providers/auth-provider'
+import { AuthenticatedUserMenu } from '@/components/auth/authenticated-user-menu'
 import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export default function HomeNav() {
   const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter()
+  const { isAuthenticated, isLoading, user, logout } = useAuth()
 
   const navItems = [
     { href: '/', label: 'Home', key: 'home' },
@@ -19,6 +36,14 @@ export default function HomeNav() {
     { href: '/help', label: 'FAQ', key: 'faq' },
     { href: '/help', label: 'Contact', key: 'contact' },
   ]
+
+  const handleSignOut = async () => {
+    await logout()
+    setIsOpen(false)
+    toast.success('Signed out successfully.')
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 mb-10">
@@ -48,14 +73,28 @@ export default function HomeNav() {
 
         {/* Actions */}
         <div className="flex items-center gap-3 lg:gap-4 z-10">
-         
-          <Link href="/login">
+          {isLoading ? (
             <Button
-              className="bg-white hover:bg-white/90 text-gray-700 text-sm font-semibold px-5 lg:px-6 py-2.5 rounded-lg transition-all duration-200 shadow-lg"
+              className="bg-white hover:bg-white text-gray-700 text-sm font-semibold px-3 lg:px-4 py-2.5 rounded-lg shadow-lg"
+              disabled
             >
-              List Properties
+              Account
             </Button>
-          </Link>
+          ) : isAuthenticated ? (
+            <AuthenticatedUserMenu
+              dashboardHref={user?.role === 'admin' ? '/admin' : '/dashboard'}
+              profileHref={user?.role === 'admin' ? '/admin/profile' : '/dashboard/profile'}
+              className="bg-white hover:bg-white/90 text-gray-700 text-sm font-semibold px-3 lg:px-4 py-2.5 rounded-lg transition-all duration-200 shadow-lg"
+            />
+          ) : (
+            <Link href="/login">
+              <Button
+                className="bg-white hover:bg-white/90 text-gray-700 text-sm font-semibold px-5 lg:px-6 py-2.5 rounded-lg transition-all duration-200 shadow-lg"
+              >
+                List Properties
+              </Button>
+            </Link>
+          )}
 
           <button
             className="lg:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-all duration-200 backdrop-blur-sm"
@@ -116,21 +155,61 @@ export default function HomeNav() {
 
           {/* Mobile Actions */}
           <div className="border-t border-white/10 px-6 py-6 space-y-3">
-            <Link
-              href="/login"
-              className="block text-center py-2.5 text-white/90 hover:text-white text-sm font-medium transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Register
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href={user?.role === 'admin' ? '/admin' : '/dashboard'}
+                  className="block text-center py-2.5 text-white/90 hover:text-white text-sm font-medium transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href={user?.role === 'admin' ? '/admin/profile' : '/dashboard/profile'}
+                  className="block text-center py-2.5 text-white/90 hover:text-white text-sm font-medium transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Profile
+                </Link>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="block w-full text-center py-2.5 text-white/90 hover:text-white text-sm font-medium transition-colors">
+                      Log out
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Log out?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You will need to sign in again to access your account and dashboards.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => void handleSignOut()}>Log out</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/signup"
+                  className="block text-center py-2.5 text-white/90 hover:text-white text-sm font-medium transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Register
+                </Link>
 
-            <Link
-              href="/login"
-              className="block text-center py-2.5 bg-white hover:bg-white/90 text-gray-700 rounded-full font-semibold text-sm transition-all shadow-lg"
-              onClick={() => setIsOpen(false)}
-            >
-              Login
-            </Link>
+                <Link
+                  href="/login"
+                  className="block text-center py-2.5 bg-white hover:bg-white/90 text-gray-700 rounded-full font-semibold text-sm transition-all shadow-lg"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Login
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

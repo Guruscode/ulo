@@ -1,21 +1,45 @@
+import type {
+  PropertyApprovalStatus,
+  PropertyCurrency,
+  PropertyPosterType,
+  PropertyStatus,
+  PropertyType,
+  PropertyVerificationStatus,
+} from '@/lib/properties/types'
+
 export type Property = {
-  id: number
+  id: string
   title: string
   location: string
+  fullAddress?: string
   price: string
   priceValue: number
-  currency: 'USD' | 'NGN'
+  currency: PropertyCurrency
   bedrooms: number
   bathrooms: number
   sqft: string
   image: string
-  type: string
-  listedBy: 'Agent' | 'Landlord'
+  images?: string[]
+  type: PropertyType
+  listedBy: PropertyPosterType
   views?: number
   badges?: string[]
   originalPrice?: string
   discount?: string
   estate?: string
+  description?: string
+  features?: string[]
+  yearBuilt?: number | null
+  videoUrl?: string | null
+  referenceCode?: string
+  contactName?: string
+  contactPhone?: string
+  contactEmail?: string
+  verificationStatus?: PropertyVerificationStatus
+  approvalStatus?: PropertyApprovalStatus
+  status?: PropertyStatus
+  createdAt?: string
+  updatedAt?: string
 }
 
 export type Estate = {

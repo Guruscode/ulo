@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -22,6 +21,7 @@ import {
 import { motion } from 'framer-motion'
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AdminLayout from '@/components/admin/admin-layout'
+import { useAuth } from '@/components/providers/auth-provider'
 
 // Mock data for statistics
 const stats = [
@@ -122,11 +122,8 @@ const colorMap: Record<string, string> = {
 }
 
 export default function AdminDashboardPage() {
-  const [adminData] = useState({
-    name: 'Admin User',
-    email: 'admin@ulo.com',
-    role: 'Super Admin',
-  })
+  const { user } = useAuth()
+  const firstName = user?.name?.split(' ')[0] || 'Admin'
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -146,7 +143,7 @@ export default function AdminDashboardPage() {
           {/* Welcome Section */}
           <div className="mb-4 sm:mb-8">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">
-              Welcome back, {adminData.name.split(' ')[0]}! 👋
+              Welcome back, {firstName}! 👋
             </h1>
             <p className="text-slate-600 mt-1 text-sm sm:text-base">
               Here&apos;s what&apos;s happening with your platform today.
@@ -317,4 +314,3 @@ export default function AdminDashboardPage() {
     </AdminLayout>
   )
 }
-

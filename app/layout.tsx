@@ -2,6 +2,7 @@ import React from "react"
 import type { Metadata } from 'next'
 import { Figtree as Fig_Tree, Geist_Mono } from 'next/font/google'
 
+import { AppProviders } from '@/components/providers/app-providers'
 import './globals.css'
 
 const figTree = Fig_Tree({ subsets: ['latin'], weight: ['400', '500', '600', '700'] })
@@ -20,7 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${figTree.className} antialiased`}>{children}</body>
+      <body className={`${figTree.className} antialiased`}>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   )
 }

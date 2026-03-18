@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -13,13 +12,11 @@ import {
 import { motion } from 'framer-motion'
 import DashboardStats from '@/components/dashboard/dashboard-stats'
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
+import { useAuth } from '@/components/providers/auth-provider'
 
 export default function DashboardPage() {
-  const [userData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-  })
+  const { user } = useAuth()
+  const firstName = user?.name?.split(' ')[0] || 'there'
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -38,7 +35,7 @@ export default function DashboardPage() {
         {/* Welcome Section */}
         <div className="mb-4 sm:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-            Welcome back, {userData.name.split(' ')[0]}! 👋
+            Welcome back, {firstName}! 👋
           </h1>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">
             Here&apos;s what&apos;s happening with your properties today.
@@ -130,4 +127,3 @@ export default function DashboardPage() {
     </DashboardLayout>
   )
 }
-

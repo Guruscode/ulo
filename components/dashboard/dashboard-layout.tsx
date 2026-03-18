@@ -2,15 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/providers/auth-provider'
 import {
   Sheet,
   SheetContent,
 } from '@/components/ui/sheet'
 import {
   Heart,
-  LogOut,
   Settings,
   User,
   BarChart3,
@@ -18,14 +18,27 @@ import {
   Building2,
   Menu,
   X,
-  Plus,
   Bell,
   Search,
   CreditCard,
+  LogOut,
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { AuthenticatedUserMenu } from '@/components/auth/authenticated-user-menu'
+import { toast } from 'sonner'
 
 const navItems = [
-  { id: 'overview', label: 'Overview', icon: BarChart3, href: '/dashboard' },
+  { id: 'overview', label: 'Dashboard', icon: BarChart3, href: '/dashboard' },
   { id: 'properties', label: 'Properties', icon: Home, href: '/dashboard/properties' },
   { id: 'hotels', label: 'Hotels', icon: Building2, href: '/dashboard/hotels' },
   { id: 'favorites', label: 'Saved', icon: Heart, href: '/dashboard/favorites' },
@@ -44,12 +57,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
-  
-  const [userData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-  })
+  const router = useRouter()
+  const { user, logout } = useAuth()
+  const displayName = user?.name || 'User'
+
+  const handleSignOut = async () => {
+    try {
+      await logout()
+      toast.success('Signed out successfully.')
+      router.push('/login')
+      router.refresh()
+    } catch (_error) {
+      toast.error('Unable to sign out right now.')
+    }
+  }
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex flex-col h-full bg-white">
@@ -75,8 +96,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <User className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-gray-900 text-sm">{userData.name}</p>
-            <p className="text-xs text-gray-500">Dashboard</p>
+            <p className="font-semibold text-gray-900 text-sm">{displayName}</p>
+            <p className="text-xs text-gray-500">{user?.email || 'Dashboard'}</p>
           </div>
         </div>
       </div>
@@ -130,13 +151,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Sign Out */}
       <div className="p-4 border-t border-gray-100">
-        <Button
-          variant="outline"
-          className="w-full justify-start text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-gray-900 bg-transparent"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-gray-900 bg-transparent"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Log out?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You will need to sign in again to access your account and dashboards.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void handleSignOut()}>Log out</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
@@ -199,20 +236,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </Button>
 
-              {/* Add Property Button - Hidden on small mobile */}
-              <Link href="/dashboard/properties" className="hidden sm:block">
-                <Button className="bg-secondary hover:bg-secondary/90 text-white text-sm h-9">
-                  <Plus className="w-4 h-4 mr-1.5" />
-                  <span className="hidden lg:inline">Add Property</span>
-                </Button>
-              </Link>
-
-              {/* Mobile Add Button - Icon only on small mobile */}
-              <Link href="/dashboard/properties" className="sm:hidden">
-                <Button size="icon" className="h-9 w-9 bg-secondary hover:bg-secondary/90">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </Link>
+              <AuthenticatedUserMenu
+                dashboardHref="/dashboard"
+                profileHref="/dashboard/profile"
+                className="h-9 gap-2 border-gray-200 bg-white px-3"
+              />
             </div>
           </div>
         </header>
@@ -251,4 +279,3 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   )
 }
-

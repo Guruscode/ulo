@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/providers/auth-provider'
 import {
   Sheet,
   SheetContent,
@@ -18,17 +19,26 @@ import {
   BarChart3,
   Menu,
   X,
-  Plus,
   Bell,
   Search,
-  LogOut,
   Shield,
-  MessageSquare,
-  MapPin,
-  Package,
   CreditCard,
+  LogOut,
 } from 'lucide-react'
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { AuthenticatedUserMenu } from '@/components/auth/authenticated-user-menu'
+import { toast } from 'sonner'
 
 const navItems = [
   { id: 'overview', label: 'Overview', icon: BarChart3, href: '/admin' },
@@ -52,12 +62,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
-  
-  const [adminData] = useState({
-    name: 'Admin User',
-    email: 'admin@ulo.com',
-    role: 'Super Admin',
-  })
+  const router = useRouter()
+  const { user, logout } = useAuth()
+  const displayName = user?.name || 'Admin User'
+  const displayEmail = user?.email || 'admin@ulo.com'
+
+  const handleSignOut = async () => {
+    try {
+      await logout()
+      toast.success('Signed out successfully.')
+      router.push('/login')
+      router.refresh()
+    } catch (_error) {
+      toast.error('Unable to sign out right now.')
+    }
+  }
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex flex-col h-full bg-slate-900">
@@ -83,8 +102,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <User className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-white text-sm">{adminData.name}</p>
-            <p className="text-xs text-slate-400">{adminData.role}</p>
+            <p className="font-semibold text-white text-sm">{displayName}</p>
+            <p className="text-xs text-slate-400">{displayEmail}</p>
           </div>
         </div>
       </div>
@@ -158,13 +177,29 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Sign Out */}
       <div className="p-4 border-t border-slate-700">
-        <Button
-          variant="outline"
-          className="w-full justify-start text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white bg-transparent"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white bg-transparent"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Log out?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You will need to sign in again to access your admin account.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void handleSignOut()}>Log out</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
@@ -227,20 +262,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </Button>
 
-              {/* Quick Add Button - Hidden on small mobile */}
-              <Link href="/admin/users" className="hidden sm:block">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm h-9">
-                  <Plus className="w-4 h-4 mr-1.5" />
-                  <span className="hidden lg:inline">Quick Add</span>
-                </Button>
-              </Link>
-
-              {/* Mobile Add Button - Icon only on small mobile */}
-              <Link href="/admin/users" className="sm:hidden">
-                <Button size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </Link>
+              <AuthenticatedUserMenu
+                dashboardHref="/admin"
+                profileHref="/admin/profile"
+                className="h-9 gap-2 border-slate-200 bg-white px-3"
+              />
             </div>
           </div>
         </header>
@@ -279,4 +305,3 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   )
 }
-
