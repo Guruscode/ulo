@@ -2,6 +2,7 @@ import { getDbClient } from '@/lib/server/db/client'
 import { seedPropertiesIfNeeded } from '@/lib/server/properties/service'
 
 let initialized = false
+let initializationPromise: Promise<void> | null = null
 
 const USER_COLUMNS = [
   { name: 'id', sql: `ALTER TABLE users ADD COLUMN id TEXT` },
@@ -124,73 +125,84 @@ export async function initializeDatabase() {
     return
   }
 
-  const db = getDbClient()
+  if (initializationPromise) {
+    return initializationPromise
+  }
 
-  await db.batch(
-    [
-      `
-        CREATE TABLE IF NOT EXISTS users (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          email TEXT NOT NULL UNIQUE,
-          password_hash TEXT NOT NULL,
-          role TEXT NOT NULL CHECK (role IN ('user', 'admin')),
-          is_active INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          last_login_at TEXT
-        );
-      `,
-      `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`,
-      `CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);`,
-      `
-        CREATE TABLE IF NOT EXISTS properties (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL,
-          location TEXT NOT NULL,
-          full_address TEXT NOT NULL,
-          estate TEXT,
-          latitude REAL,
-          longitude REAL,
-          price_value INTEGER NOT NULL,
-          currency TEXT NOT NULL CHECK (currency IN ('USD', 'NGN')),
-          pricing_period TEXT NOT NULL CHECK (pricing_period IN ('one-time', 'month', 'week', 'day')),
-          type TEXT NOT NULL CHECK (type IN ('For Sale', 'For Rent', 'Commercial', 'Land', 'Shortlet')),
-          listed_by TEXT NOT NULL CHECK (listed_by IN ('Agent', 'Landlord', 'Dealer', 'Owner')),
-          bedrooms INTEGER NOT NULL DEFAULT 0,
-          bathrooms REAL NOT NULL DEFAULT 0,
-          sqft INTEGER NOT NULL DEFAULT 0,
-          year_built INTEGER,
-          features_json TEXT NOT NULL DEFAULT '[]',
-          image_urls_json TEXT NOT NULL DEFAULT '[]',
-          video_url TEXT,
-          reference_code TEXT NOT NULL UNIQUE,
-          document_info TEXT,
-          contact_name TEXT NOT NULL,
-          contact_phone TEXT NOT NULL,
-          contact_email TEXT NOT NULL,
-          verification_status TEXT NOT NULL DEFAULT 'not_requested' CHECK (verification_status IN ('not_requested', 'requested', 'verified')),
-          approval_status TEXT NOT NULL DEFAULT 'pending_review' CHECK (approval_status IN ('draft', 'pending_review', 'approved', 'rejected')),
-          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'sold', 'pending')),
-          disclaimer_accepted INTEGER NOT NULL DEFAULT 0,
-          description TEXT NOT NULL,
-          featured INTEGER NOT NULL DEFAULT 0,
-          created_by_user_id TEXT NOT NULL,
-          approved_by_user_id TEXT,
-          approved_at TEXT,
-          rejection_reason TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-      `,
-    ].map((sql) => ({ sql })),
-    'write'
-  )
+  initializationPromise = (async () => {
+    const db = getDbClient()
 
-  await ensureUsersTableSchema()
-  await ensurePropertiesTableSchema()
+    await db.batch(
+      [
+        `
+          CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('user', 'admin')),
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_login_at TEXT
+          );
+        `,
+        `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`,
+        `CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);`,
+        `
+          CREATE TABLE IF NOT EXISTS properties (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            location TEXT NOT NULL,
+            full_address TEXT NOT NULL,
+            estate TEXT,
+            latitude REAL,
+            longitude REAL,
+            price_value INTEGER NOT NULL,
+            currency TEXT NOT NULL CHECK (currency IN ('USD', 'NGN')),
+            pricing_period TEXT NOT NULL CHECK (pricing_period IN ('one-time', 'month', 'week', 'day')),
+            type TEXT NOT NULL CHECK (type IN ('For Sale', 'For Rent', 'Commercial', 'Land', 'Shortlet')),
+            listed_by TEXT NOT NULL CHECK (listed_by IN ('Agent', 'Landlord', 'Dealer', 'Owner')),
+            bedrooms INTEGER NOT NULL DEFAULT 0,
+            bathrooms REAL NOT NULL DEFAULT 0,
+            sqft INTEGER NOT NULL DEFAULT 0,
+            year_built INTEGER,
+            features_json TEXT NOT NULL DEFAULT '[]',
+            image_urls_json TEXT NOT NULL DEFAULT '[]',
+            video_url TEXT,
+            reference_code TEXT NOT NULL UNIQUE,
+            document_info TEXT,
+            contact_name TEXT NOT NULL,
+            contact_phone TEXT NOT NULL,
+            contact_email TEXT NOT NULL,
+            verification_status TEXT NOT NULL DEFAULT 'not_requested' CHECK (verification_status IN ('not_requested', 'requested', 'verified')),
+            approval_status TEXT NOT NULL DEFAULT 'pending_review' CHECK (approval_status IN ('draft', 'pending_review', 'approved', 'rejected')),
+            status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'sold', 'pending')),
+            disclaimer_accepted INTEGER NOT NULL DEFAULT 0,
+            description TEXT NOT NULL,
+            featured INTEGER NOT NULL DEFAULT 0,
+            created_by_user_id TEXT NOT NULL,
+            approved_by_user_id TEXT,
+            approved_at TEXT,
+            rejection_reason TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
+      ].map((sql) => ({ sql })),
+      'write'
+    )
 
-  await seedPropertiesIfNeeded()
+    await ensureUsersTableSchema()
+    await ensurePropertiesTableSchema()
 
-  initialized = true
+    initialized = true
+    await seedPropertiesIfNeeded()
+  })()
+
+  try {
+    await initializationPromise
+  } finally {
+    initializationPromise = null
+  }
 }
