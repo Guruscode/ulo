@@ -151,7 +151,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                 Listed by {property.listedBy}
               </span>
               <span className="text-primary font-medium hover:underline cursor-pointer">
-                {property.listedBy === 'Landlord' ? 'Register to Contact' : 'View Contact'}
+                {property.listedBy === 'Landlord' ? 'Login to Message' : 'View Agent Details'}
               </span>
             </div>
           </div>

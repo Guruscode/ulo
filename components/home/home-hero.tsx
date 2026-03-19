@@ -3,37 +3,39 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import type { CurrencyFilter, QuickType } from '@/components/home/types'
+import { Dialog } from '@radix-ui/react-dialog'
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
 
 const featureProperties = [
   {
     id: 1,
-    title: 'Family House Luxury',
-    image: 'https://images.pexels.com/photos/271618/pexels-photo-271618.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/271618/pexels-photo-271618.jpeg',
+    title: 'Luxury five star Hotel',
+    image: 'https://image2url.com/r2/default/images/1773914209038-0ea9de80-d4a1-42b1-96bf-6a5b8161f677.jpg',
+    thumbnail: 'https://image2url.com/r2/default/images/1773914209038-0ea9de80-d4a1-42b1-96bf-6a5b8161f677.jpg',
   },
   {
     id: 2,
-    title: 'Modern Villa Estate',
-    image: 'https://images.pexels.com/photos/7578983/pexels-photo-7578983.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/7578983/pexels-photo-7578983.jpeg',
+    title: 'Luxury city Apartment',
+    image: 'https://image2url.com/r2/default/images/1773914288792-6bad1841-26ba-494b-8a3b-d7c62630fad6.jpg',
+    thumbnail: 'https://image2url.com/r2/default/images/1773914288792-6bad1841-26ba-494b-8a3b-d7c62630fad6.jpg',
   },
   {
     id: 3,
-    title: 'Luxury Apartment',
-    image: 'https://images.pexels.com/photos/7578892/pexels-photo-7578892.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/7578892/pexels-photo-7578892.jpeg',
+    title: 'Modern Cozy hotel amenity',
+    image: 'https://image2url.com/r2/default/images/1773914396351-4ebaafbd-d8ad-4006-aa20-3fbeb0d83d97.jpg',
+    thumbnail: 'https://image2url.com/r2/default/images/1773914396351-4ebaafbd-d8ad-4006-aa20-3fbeb0d83d97.jpg',
   },
   {
     id: 4,
-    title: 'Premium Penthouse',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=900&fit=crop',
-    thumbnail: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=350&fit=crop',
+    title: 'Premium Penthouse Suite',
+    image: 'https://image2url.com/r2/default/images/1773914912960-1730ed36-17b1-4c7a-af1e-85aae2a11c97.jpg',
+    thumbnail: 'https://image2url.com/r2/default/images/1773914912960-1730ed36-17b1-4c7a-af1e-85aae2a11c97.jpg',
   },
   {
     id: 5,
-    title: 'Executive Home',
-    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&h=900&fit=crop',
-    thumbnail: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=350&fit=crop',
+    title: 'Land',
+    image: 'https://image2url.com/r2/default/images/1773914943604-90e15d24-ae91-4327-98fb-4f548eaa8d19.jpg',
+    thumbnail: 'https://image2url.com/r2/default/images/1773914943604-90e15d24-ae91-4327-98fb-4f548eaa8d19.jpg',
   },
 ]
 
@@ -43,9 +45,13 @@ type HomeHeroProps = {
   priceRangeFilter: string
   currencyFilter: CurrencyFilter
   quickType: QuickType
+  customMinPrice: number
+  customMaxPrice: number
   onLocationChange: (value: string) => void
   onTypeChange: (value: string) => void
   onPriceRangeChange: (value: string) => void
+  onCustomMinPriceChange: (value: number) => void
+  onCustomMaxPriceChange: (value: number) => void
   onCurrencyChange: (value: CurrencyFilter) => void
   onQuickTypeChange: (value: QuickType) => void
   onSearch: () => void
@@ -61,12 +67,16 @@ export default function HomeHero({
   onTypeChange,
   onPriceRangeChange,
   onCurrencyChange,
+
   onQuickTypeChange,
   onSearch,
+  customMinPrice,
+  customMaxPrice,
+  onCustomMinPriceChange,
+  onCustomMaxPriceChange,
 }: HomeHeroProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
 
-  // Auto-rotate carousel
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % featureProperties.length)
@@ -87,106 +97,147 @@ export default function HomeHero({
 
   return (
     <section className="relative w-full h-screen overflow-hidden">
-      {/* Background Image */}
       <div className="absolute inset-0">
         <img
           src={currentProperty.image}
           alt="Hero background"
           className="w-full h-full object-cover"
         />
-        {/* Dark gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/20" />
-        {/* Large background text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
-          <span className="text-[15rem] font-bold text-white tracking-wider select-none">Home</span>
+          <span className="text-[15rem] font-bold text-white tracking-wider select-none">ULO</span>
         </div>
       </div>
 
-      {/* Content Container */}
       <div className="relative h-full flex flex-col justify-between">
-        {/* Top Section - Content */}
         <div className="flex-1 flex items-center px-6 sm:px-8 lg:px-16 xl:px-20">
           <div className="w-full max-w-2xl">
-            {/* Heading and Description */}
             <div className="space-y-6">
               <h1 className="text-6xl sm:text-7xl lg:text-7xl font-bold text-white leading-tight tracking-tight">
-                Make Every Space Unique and Inspiring
+                Find Your Perfect Space — Faster, Smarter, Better
               </h1>
               <p className="text-base sm:text-lg text-white/85 max-w-xl leading-relaxed">
-                Your life evolves, and your home should too. We design flexible living spaces that adapt to your current needs and accommodate your evolving aspirations for the future.
+                Buy, rent, or book verified properties, apartments, and hotels across Nigeria — all in one seamless platform designed for modern living and smart decisions.
               </p>
             </div>
 
-            {/* Integrated Search Section */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 w-full max-w-md border border-white/20 mt-8">
               <div className="space-y-4">
-                {/* Location Search */}
                 <input
                   type="text"
-                  placeholder="Search location..."
+                  placeholder="Search by city, area, or property name..."
                   value={locationFilter}
                   onChange={(e) => onLocationChange(e.target.value)}
                   className="w-full px-4 py-3 bg-white/20 border border-white/30 text-white rounded-lg placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 text-sm backdrop-blur-sm transition-all"
                 />
 
-                {/* Filter Row */}
                 <div className="grid grid-cols-2 gap-3">
                   <select
                     value={typeFilter}
                     onChange={(e) => onTypeChange(e.target.value)}
                     className="px-3 py-2.5 bg-white/20 border border-white/30 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white/40 appearance-none cursor-pointer text-sm backdrop-blur-sm transition-all"
                   >
-                    <option value="All Types" className="text-gray-900">Type</option>
+                    <option value="All Types" className="text-gray-900">Property Type</option>
                     <option value="House" className="text-gray-900">House</option>
                     <option value="Apartment" className="text-gray-900">Apartment</option>
                     <option value="Villa" className="text-gray-900">Villa</option>
+                    <option value="Commercial" className="text-gray-900">Commercial</option>
+                    <option value="Land" className="text-gray-900">Land</option>
                   </select>
 
-                  <select
-                    value={priceRangeFilter}
-                    onChange={(e) => onPriceRangeChange(e.target.value)}
-                    className="px-3 py-2.5 bg-white/20 border border-white/30 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white/40 appearance-none cursor-pointer text-sm backdrop-blur-sm transition-all"
-                  >
-                    <option value="" className="text-gray-900">Price</option>
-                    <option value="100000" className="text-gray-900">₦100K - ₦500K</option>
-                    <option value="500000" className="text-gray-900">₦500K - ₦1M</option>
-                    <option value="1000000" className="text-gray-900">₦1M+</option>
-                  </select>
+                  <div className="flex gap-2">
+                    <div className="relative">
+                      <select
+                        value={priceRangeFilter}
+                        onChange={(e) => onPriceRangeChange(e.target.value)}
+                        className="flex-1 px-3 py-2.5 bg-white/20 border border-white/30 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white/40 appearance-none cursor-pointer text-sm backdrop-blur-sm transition-all"
+                      >
+                        <option value="" className="text-gray-900">Budget Range</option>
+                        <option value="100000" className="text-gray-900">₦100K - ₦500K</option>
+                        <option value="500000" className="text-gray-900">₦500K - ₦1M</option>
+                        <option value="1000000" className="text-gray-900">₦1M - ₦5M</option>
+                        <option value="5000000" className="text-gray-900">₦5M+</option>
+                        <option value="custom" className="text-gray-900">Custom Range</option>
+                      </select>
+                      {priceRangeFilter === 'custom' && (
+                        <>
+                          <Dialog open={priceRangeFilter === 'custom'} onOpenChange={onPriceRangeChange}>
+                            <DialogTrigger asChild>
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button size="sm" variant="ghost" className="text-white/80 text-xs">Set Custom</Button>
+                              </div>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Custom Price Range</DialogTitle>
+                                <DialogDescription>
+                                  Set your preferred minimum and maximum price range.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                <div>
+                                  <label className="text-sm font-medium text-gray-900 block mb-2">Minimum Price</label>
+                                  <input
+                                    type="number"
+                                    placeholder="Min ₦"
+                                    value={customMinPrice ?? ''}
+                                    onChange={(e) => onCustomMinPriceChange(Number(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-900 block mb-2">Maximum Price</label>
+                                  <input
+                                    type="number"
+                                    placeholder="Max ₦"
+                                    value={customMaxPrice ?? ''}
+                                    onChange={(e) => onCustomMaxPriceChange(Number(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                  />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button type="button" onClick={() => onPriceRangeChange('custom')}>Apply</Button>
+                                <DialogClose asChild>
+                                  <Button type="button" variant="outline">Cancel</Button>
+                                </DialogClose>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </>
+                      )}
+                    </div>
+
+
+                  </div>
                 </div>
 
-                {/* Search Button */}
                 <Button
                   onClick={onSearch}
                   className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 rounded-lg transition-all"
                 >
-                  Search
+                  Search Properties
                 </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Right - Property Showcase Card - Hidden on mobile */}
         <div className="hidden lg:block absolute bottom-12 right-6 sm:right-8 lg:right-16 xl:right-20 w-64 sm:w-72">
           <div className="relative">
-            {/* Featured Property Card */}
             <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
-              {/* Image Container */}
               <div className="relative h-48 overflow-hidden bg-gray-300">
                 <img
                   src={currentProperty.thumbnail}
                   alt={currentProperty.title}
                   className="w-full h-full object-cover"
                 />
-                {/* Property Title Badge */}
                 <div className="absolute top-3 right-3 bg-white/30 backdrop-blur-md rounded px-3 py-1">
                   <p className="text-white font-semibold text-xs">{currentProperty.title}</p>
                 </div>
               </div>
 
-              {/* Card Content */}
               <div className="px-4 py-4 space-y-4">
-                {/* Pagination Section */}
                 <div className="flex items-center justify-between">
                   <button
                     onClick={prevSlide}
@@ -207,9 +258,8 @@ export default function HomeHero({
                   </button>
                 </div>
 
-                {/* Explore Button */}
                 <button className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 rounded-full text-sm transition-all duration-200">
-                  Explore Now
+                  Explore Property
                 </button>
               </div>
             </div>
@@ -219,4 +269,3 @@ export default function HomeHero({
     </section>
   )
 }
-

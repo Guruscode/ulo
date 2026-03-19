@@ -2,29 +2,29 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Home, KeyRound, BadgeDollarSign } from 'lucide-react'
+import { DollarSign, FileCheck, Building2 } from 'lucide-react'
 
 const cards = [
   {
-    title: 'Buy a home',
-    body: 'A real estate agent can provide you with a clear breakdown of costs so that you can avoid surprise expenses.',
-    cta: 'Find a local agent',
-    icon: Home,
-    href: '/buy',
+    title: 'Property Valuation',
+    body: 'Get an accurate market valuation of your property from our experienced appraisers.',
+    cta: 'Get Valuation',
+    icon: DollarSign,
+    href: '/services/property-valuation',
   },
   {
-    title: 'Rent a home',
-    body: 'We are creating a seamless online experience from shopping, to applying, to paying rent.',
-    cta: 'Find rentals',
-    icon: KeyRound,
-    href: '/rent',
+    title: 'Legal Documentation',
+    body: 'Complete legal support including title verification and document preparation.',
+    cta: 'Legal Services',
+    icon: FileCheck,
+    href: '/services/legal-documentation',
   },
   {
-    title: 'Sell a home',
-    body: 'No matter what path you take to sell your home, we can help you navigate a successful sale.',
-    cta: 'See your options',
-    icon: BadgeDollarSign,
-    href: '/sell',
+    title: 'Property Management',
+    body: 'Full property management services including maintenance and tenant relations.',
+    cta: 'Manage Property',
+    icon: Building2,
+    href: '/services/property-management',
   },
 ]
 
@@ -55,3 +55,4 @@ export default function HeroServices() {
     </section>
   )
 }
+

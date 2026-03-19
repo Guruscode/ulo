@@ -20,14 +20,26 @@ export default function Homepage() {
   const { properties } = usePublicHomeProperties()
   const [locationFilter, setLocationFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('All Types')
-  const [priceRangeFilter, setPriceRangeFilter] = useState('Any Price')
+  const [priceRangeFilter, setPriceRangeFilter] = useState('')
   const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>('Any')
   const [quickType, setQuickType] = useState<QuickType>('All')
+  const [customMinPrice, setCustomMinPrice] = useState<number>(0)
+  const [customMaxPrice, setCustomMaxPrice] = useState<number>(0)
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([])
 
   const handleCurrencyChange = (value: CurrencyFilter) => {
     setCurrencyFilter(value)
-    setPriceRangeFilter('Any Price')
+    setPriceRangeFilter('')
+    setCustomMinPrice(0)
+    setCustomMaxPrice(0)
+  }
+
+  const handleCustomMinPriceChange = (value: number) => {
+    setCustomMinPrice(value)
+  }
+
+  const handleCustomMaxPriceChange = (value: number) => {
+    setCustomMaxPrice(value)
   }
 
   const handleSearch = () => {
@@ -35,8 +47,10 @@ export default function Homepage() {
     if (locationFilter.trim()) params.set('location', locationFilter.trim())
     if (typeFilter !== 'All Types') params.set('type', typeFilter)
     if (currencyFilter !== 'Any') params.set('currency', currencyFilter)
-    if (priceRangeFilter !== 'Any Price') params.set('priceRange', priceRangeFilter)
-    router.push(`/listings?${params.toString()}`)
+    if (priceRangeFilter && priceRangeFilter !== '') params.set('priceRange', priceRangeFilter)
+    if (customMinPrice > 0) params.set('customMin', customMinPrice.toString())
+    if (customMaxPrice > 0) params.set('customMax', customMaxPrice.toString())
+    router.push(`/listings?${params.toString() || '#'}`)
   }
 
   useEffect(() => {
@@ -62,8 +76,19 @@ export default function Homepage() {
       result = result.filter((property) => property.currency === currencyFilter)
     }
 
+    // Price filtering
+    if (priceRangeFilter === 'custom' && (customMinPrice > 0 || customMaxPrice > 0)) {
+      result = result.filter((property) => {
+        const priceNum = property.priceValue
+        return priceNum >= customMinPrice && (customMaxPrice === 0 || priceNum <= customMaxPrice)
+      })
+    } else if (priceRangeFilter) {
+      const minPrice = parseInt(priceRangeFilter)
+      result = result.filter((property) => property.priceValue >= minPrice)
+    }
+
     setFilteredProperties(result)
-  }, [currencyFilter, locationFilter, priceRangeFilter, properties, quickType, typeFilter])
+  }, [currencyFilter, locationFilter, priceRangeFilter, customMinPrice, customMaxPrice, properties, quickType, typeFilter])
 
   return (
     <div className="min-h-screen bg-background">
@@ -74,9 +99,13 @@ export default function Homepage() {
         priceRangeFilter={priceRangeFilter}
         currencyFilter={currencyFilter}
         quickType={quickType}
+        customMinPrice={customMinPrice}
+        customMaxPrice={customMaxPrice}
         onLocationChange={setLocationFilter}
         onTypeChange={setTypeFilter}
         onPriceRangeChange={setPriceRangeFilter}
+        onCustomMinPriceChange={handleCustomMinPriceChange}
+        onCustomMaxPriceChange={handleCustomMaxPriceChange}
         onCurrencyChange={handleCurrencyChange}
         onQuickTypeChange={setQuickType}
         onSearch={handleSearch}
