@@ -125,7 +125,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                 <h1 className="text-4xl md:text-5xl font-bold text-foreground">{property.title}</h1>
               </div>
               <div className="mb-3 inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                Posted by {listedByLabel}
+                Listed by {listedByLabel}
               </div>
               <div className="flex items-center gap-2 text-foreground/70 mb-4">
                 <MapPin className="w-5 h-5" />
@@ -169,7 +169,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Posted By</p><p className="text-xl font-bold text-foreground">{listedByLabel}</p><p className="text-sm text-foreground/70 mt-2">This listing was submitted by a {listedByLabel.toLowerCase()} on the platform.</p></Card>
+            <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Listed By</p><p className="text-xl font-bold text-foreground">{listedByLabel}</p><p className="text-sm text-foreground/70 mt-2">This listing was submitted by a {listedByLabel.toLowerCase()} on the platform.</p></Card>
             <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Property Type</p><p className="text-xl font-bold text-foreground">{property.type}</p><p className="text-sm text-foreground/70 mt-2">Approval status: {property.approvalStatus.replace('_', ' ')}. {property.viewsCount ?? 0} views.</p></Card>
             <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Estate / Area</p><p className="text-xl font-bold text-foreground">{property.estate || property.location}</p><p className="text-sm text-foreground/70 mt-2">Reference code: {property.referenceCode}</p></Card>
           </div>

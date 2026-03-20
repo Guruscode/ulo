@@ -620,14 +620,14 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 {fieldErrors.location?.[0] ? <p className="text-sm text-red-600">{fieldErrors.location[0]}</p> : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="listedBy">Posted By</Label>
+                <Label htmlFor="listedBy">Listed By</Label>
                 <Select value={form.listedBy} onValueChange={(value) => setForm({ ...form, listedBy: value as PropertyFormState['listedBy'] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Agent">Agent</SelectItem>
                     <SelectItem value="Landlord">Landlord</SelectItem>
-                    <SelectItem value="Dealer">Dealer</SelectItem>
-                    <SelectItem value="Owner">Owner</SelectItem>
+                    {/* <SelectItem value="Dealer">Dealer</SelectItem>
+                    <SelectItem value="Owner">Owner</SelectItem> */}
                   </SelectContent>
                 </Select>
               </div>
@@ -897,7 +897,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                     <p><span className="font-medium text-gray-900">Reference:</span> {viewProperty.referenceCode}</p>
                     <p><span className="font-medium text-gray-900">Approval:</span> {viewProperty.approvalStatus}</p>
                     <p><span className="font-medium text-gray-900">Type:</span> {viewProperty.type}</p>
-                    <p><span className="font-medium text-gray-900">Posted by:</span> {viewProperty.listedBy}</p>
+                    <p><span className="font-medium text-gray-900">Listed by:</span> {viewProperty.listedBy}</p>
                     <p><span className="font-medium text-gray-900">Bedrooms:</span> {viewProperty.bedrooms}</p>
                     <p><span className="font-medium text-gray-900">Bathrooms:</span> {viewProperty.bathrooms}</p>
                     <p><span className="font-medium text-gray-900">Sqft:</span> {viewProperty.sqft.toLocaleString()}</p>
