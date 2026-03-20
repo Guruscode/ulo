@@ -3,8 +3,16 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import type { CurrencyFilter, QuickType } from '@/components/home/types'
-import { Dialog } from '@radix-ui/react-dialog'
-import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
 const featureProperties = [
   {
@@ -160,52 +168,58 @@ export default function HomeHero({
                         <option value="custom" className="text-gray-900">Custom Range</option>
                       </select>
                       {priceRangeFilter === 'custom' && (
-                        <>
-                          <Dialog open={priceRangeFilter === 'custom'} onOpenChange={onPriceRangeChange}>
-                            <DialogTrigger asChild>
-                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button size="sm" variant="ghost" className="text-white/80 text-xs">Set Custom</Button>
+                        <Dialog open={priceRangeFilter === 'custom'}>
+                          <DialogTrigger asChild>
+                            <Button 
+                              type="button" 
+                              variant="secondary" 
+                              className="absolute inset-0 text-white/80 text-xs bg-transparent border-white/30 hover:bg-white/10 rounded-lg"
+                              size="sm"
+                            >
+                              Set Custom Range
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Custom Price Range</DialogTitle>
+                              <DialogDescription>
+                                Set your preferred minimum and maximum price range.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div>
+                            <label className="text-sm font-medium text-black/90 block mb-2">Minimum Price</label>
+                                <input
+                                  type="number"
+                                  placeholder="Min ₦"
+                                  value={customMinPrice ?? ''}
+                                  onChange={(e) => onCustomMinPriceChange(Number(e.target.value) || 0)}
+                                  className="w-full px-3 py-2 border border-black/30 rounded-md focus:outline-none focus:ring-2 focus:ring-black/40 text-black placeholder:text-white/60 bg-black/10 backdrop-blur-sm text-sm"
+                                />
+
                               </div>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                              <DialogHeader>
-                                <DialogTitle>Custom Price Range</DialogTitle>
-                                <DialogDescription>
-                                  Set your preferred minimum and maximum price range.
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4 py-4">
-                                <div>
-                                  <label className="text-sm font-medium text-gray-900 block mb-2">Minimum Price</label>
-                                  <input
-                                    type="number"
-                                    placeholder="Min ₦"
-                                    value={customMinPrice ?? ''}
-                                    onChange={(e) => onCustomMinPriceChange(Number(e.target.value) || 0)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-900 block mb-2">Maximum Price</label>
+                              <div>
+                                <label className="text-sm font-medium text-black/90 block mb-2">Maximum Price</label>
                                   <input
                                     type="number"
                                     placeholder="Max ₦"
                                     value={customMaxPrice ?? ''}
                                     onChange={(e) => onCustomMaxPriceChange(Number(e.target.value) || 0)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    className="w-full px-3 py-2 border border-black/30 rounded-md focus:outline-none focus:ring-2 focus:ring-black/40 text-black placeholder:text-white/60 bg-black/10 backdrop-blur-sm text-sm"
                                   />
-                                </div>
+
                               </div>
-                              <DialogFooter>
-                                <Button type="button" onClick={() => onPriceRangeChange('custom')}>Apply</Button>
-                                <DialogClose asChild>
-                                  <Button type="button" variant="outline">Cancel</Button>
-                                </DialogClose>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        </>
+                            </div>
+                            <DialogFooter>
+                              <Button onClick={onSearch}>Apply & Search</Button>
+                              <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                              </DialogClose>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       )}
+
                     </div>
 
 
