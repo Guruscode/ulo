@@ -58,7 +58,7 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        <motion.div variants={fadeInUp} initial="initial" animate="animate">
+        {/* <motion.div variants={fadeInUp} initial="initial" animate="animate">
           <Card className="bg-white p-4 sm:p-6">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Live Workflow Notes</h2>
             <div className="space-y-3 sm:space-y-4">
@@ -76,7 +76,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </Card>
-        </motion.div>
+        </motion.div> */}
       </motion.div>
     </DashboardLayout>
   )

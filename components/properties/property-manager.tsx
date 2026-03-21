@@ -39,6 +39,7 @@ import {
 } from '@/lib/client/properties-client'
 import type { PropertyRecord, PropertyUpsertInput } from '@/lib/properties/types'
 import { formatPropertyPrice } from '@/lib/properties/presentation'
+import { STATES, CITIES_BY_STATE, type State } from '@/lib/properties/nigeria-locations'
 
 type PropertyManagerMode = 'dashboard' | 'admin'
 type PropertyFieldKey = keyof PropertyFormState
@@ -47,6 +48,8 @@ type PropertyFieldErrors = Partial<Record<PropertyFieldKey, string[]>>
 type PropertyFormState = {
   title: string
   location: string
+  state: string
+  city: string
   fullAddress: string
   estate: string
   latitude: string
@@ -75,11 +78,13 @@ type PropertyFormState = {
   featured: boolean
 }
 
-const PROPERTY_TYPES = ['For Sale', 'For Rent', 'Commercial', 'Land', 'Shortlet'] as const
+const PROPERTY_TYPES = ['For Sale', 'For Rent', 'Land', 'Shortlet'] as const
 
 const EMPTY_FORM: PropertyFormState = {
   title: '',
   location: '',
+  state: '',
+  city: '',
   fullAddress: '',
   estate: '',
   latitude: '',
@@ -109,9 +114,15 @@ const EMPTY_FORM: PropertyFormState = {
 }
 
 function toFormState(property: PropertyRecord): PropertyFormState {
+  const parts = property.location.split(', ').reverse();
+  const state = parts[0] || '';
+  const city = parts.slice(1).reverse().join(', ') || '';
+
   return {
     title: property.title,
     location: property.location,
+    state,
+    city,
     fullAddress: property.fullAddress,
     estate: property.estate || '',
     latitude: property.latitude === null ? '' : String(property.latitude),
@@ -149,7 +160,7 @@ function toFormState(property: PropertyRecord): PropertyFormState {
 function toRequestPayload(form: PropertyFormState): PropertyUpsertInput {
   return {
     title: form.title.trim(),
-    location: form.location.trim(),
+    location: (form.city ? `${form.city}, ${form.state}` : form.state || form.location).trim(),
     fullAddress: form.fullAddress.trim(),
     estate: form.estate.trim() || null,
     latitude: form.latitude.trim() ? Number(form.latitude) : null,
@@ -615,9 +626,34 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input id="location" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} />
-                {fieldErrors.location?.[0] ? <p className="text-sm text-red-600">{fieldErrors.location[0]}</p> : null}
+                <Label>State</Label>
+                <Select value={form.state} onValueChange={(value) => setForm({ ...form, state: value, city: '' })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATES.map((state) => (
+                      <SelectItem key={state} value={state}>
+                        {state}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>City</Label>
+                <Select value={form.city} onValueChange={(value) => setForm({ ...form, city: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {form.state ? CITIES_BY_STATE[form.state as State]?.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    )) : []}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="listedBy">Listed By</Label>
@@ -637,8 +673,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 {fieldErrors.fullAddress?.[0] ? <p className="text-sm text-red-600">{fieldErrors.fullAddress[0]}</p> : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="estate">Estate / Area</Label>
-                <Input id="estate" value={form.estate} onChange={(event) => setForm({ ...form, estate: event.target.value })} />
+                <Label htmlFor="estate">Estate / Area (optional)</Label>
+                <Input id="estate" value={form.estate} onChange={(event) => setForm({ ...form, estate: event.target.value })} placeholder="e.g., Victoria Garden City, Lekki Phase 1" />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="description">Description</Label>
@@ -708,11 +744,11 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 <Input id="yearBuilt" type="number" value={form.yearBuilt} onChange={(event) => setForm({ ...form, yearBuilt: event.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude</Label>
+                <Label htmlFor="latitude">Latitude <span className="text-xs text-gray-500">(get from https://www.gps-coordinates.net/)</span></Label>
                 <Input id="latitude" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude</Label>
+                <Label htmlFor="longitude">Longitude <span className="text-xs text-gray-500">(get from https://www.gps-coordinates.net/)</span></Label>
                 <Input id="longitude" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} />
               </div>
               <div className="space-y-2 md:col-span-2">
