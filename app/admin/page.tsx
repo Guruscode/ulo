@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <motion.div variants={fadeInUp} initial="initial" animate="animate">
+          {/* <motion.div variants={fadeInUp} initial="initial" animate="animate">
             <Card className="bg-white p-4 sm:p-6 h-full">
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-3 sm:mb-4">Operational Notes</h2>
               <div className="space-y-3 sm:space-y-4">
@@ -107,9 +107,9 @@ export default function AdminDashboardPage() {
                 })}
               </div>
             </Card>
-          </motion.div>
+          </motion.div> */}
 
-          <motion.div variants={fadeInUp} initial="initial" animate="animate">
+          {/* <motion.div variants={fadeInUp} initial="initial" animate="animate">
             <Card className="bg-white p-4 sm:p-6 h-full">
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-3 sm:mb-4">Data Model</h2>
               <div className="space-y-4">
@@ -131,7 +131,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </Card>
-          </motion.div>
+          </motion.div> */}
         </div>
       </motion.div>
     </AdminLayout>
