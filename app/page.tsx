@@ -114,7 +114,7 @@ export default function Homepage() {
       <HomeProperties allProperties={properties} filteredProperties={filteredProperties} />
       <HomeHotels />
       <NeighbourhoodGuide />
-      <EstateSection estates={homeEstates} />
+      {/* <EstateSection estates={homeEstates} /> */}
       <HomeFooter />
     </div>
   )

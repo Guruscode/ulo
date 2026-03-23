@@ -38,6 +38,8 @@ import {
 } from '@/lib/client/hotels-client'
 import { formatHotelPrice } from '@/lib/hotels/presentation'
 import type { HotelBookingRecord, HotelRecord, HotelUpsertInput } from '@/lib/hotels/types'
+import { FileUpload } from '@/components/ui/file-upload';
+import { STATES, CITIES_BY_STATE, type State } from '@/lib/properties/nigeria-locations';
 
 type HotelManagerMode = 'dashboard' | 'admin'
 
@@ -57,9 +59,9 @@ type RoomForm = {
 type HotelForm = {
   name: string
   location: string
+  state: string
+  city: string
   description: string
-  rating: string
-  reviewCount: string
   priceValue: string
   images: [string, string, string, string]
   amenities: string
@@ -86,9 +88,9 @@ const EMPTY_ROOM: RoomForm = {
 const EMPTY_FORM: HotelForm = {
   name: '',
   location: '',
+  state: '',
+  city: '',
   description: '',
-  rating: '4.5',
-  reviewCount: '0',
   priceValue: '',
   images: ['', '', '', ''],
   amenities: '',
@@ -101,12 +103,16 @@ const EMPTY_FORM: HotelForm = {
 }
 
 function toFormState(hotel: HotelRecord): HotelForm {
+  const parts = hotel.location.split(', ').reverse();
+  const state = parts[0] || '';
+  const city = parts.slice(1).reverse().join(', ') || '';
+
   return {
     name: hotel.name,
     location: hotel.location,
+    state,
+    city,
     description: hotel.description,
-    rating: String(hotel.rating),
-    reviewCount: String(hotel.reviewCount),
     priceValue: String(hotel.priceValue),
     images: [
       hotel.images[0] || '',
@@ -138,10 +144,10 @@ function toFormState(hotel: HotelRecord): HotelForm {
 function toPayload(form: HotelForm): HotelUpsertInput {
   return {
     name: form.name.trim(),
-    location: form.location.trim(),
+    location: (form.city ? `${form.city}, ${form.state}` : form.state || form.location).trim(),
     description: form.description.trim(),
-    rating: Number(form.rating),
-    reviewCount: Number(form.reviewCount),
+    rating: 0,
+    reviewCount: 0,
     priceValue: Number(form.priceValue),
     images: form.images.map((image) => image.trim()),
     amenities: form.amenities.split(',').map((amenity) => amenity.trim()).filter(Boolean),
@@ -466,11 +472,33 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2"><Label>Hotel Name</Label><Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></div>
-            <div className="space-y-2"><Label>Location</Label><Input value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} /></div>
+            <div className="space-y-2"><Label>State</Label><Select value={form.state} onValueChange={(value) => setForm({ ...form, state: value, city: '' })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select state" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATES.map((state) => (
+                  <SelectItem key={state} value={state}>
+                    {state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select></div>
+            <div className="space-y-2"><Label>City</Label><Select value={form.city} onValueChange={(value) => setForm({ ...form, city: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select city" />
+              </SelectTrigger>
+              <SelectContent>
+                {(form.state ? CITIES_BY_STATE[form.state as State] || [] : []).map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            </div>
             <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea rows={4} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></div>
             <div className="space-y-2"><Label>Price per Night</Label><Input type="number" value={form.priceValue} onChange={(event) => setForm({ ...form, priceValue: event.target.value })} /></div>
-            <div className="space-y-2"><Label>Rating</Label><Input type="number" step="0.1" value={form.rating} onChange={(event) => setForm({ ...form, rating: event.target.value })} /></div>
-            <div className="space-y-2"><Label>Review Count</Label><Input type="number" value={form.reviewCount} onChange={(event) => setForm({ ...form, reviewCount: event.target.value })} /></div>
             {mode === 'admin' ? (
               <div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as HotelForm['status'] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="pending">Pending</SelectItem></SelectContent></Select></div>
             ) : null}
@@ -494,15 +522,15 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
           <div className="grid gap-4 md:grid-cols-2">
             {form.images.map((image, index) => (
               <div key={index} className="space-y-2">
-                <Label>Gallery Image {index + 1}</Label>
-                <Input
-                  value={image}
-                  onChange={(event) => {
+                <Label>Upload Image {index + 1}</Label>
+                <div className="flex gap-2">
+                  <FileUpload onUpload={(url) => {
                     const next = [...form.images] as HotelForm['images']
-                    next[index] = event.target.value
+                    next[index] = url
                     setForm({ ...form, images: next })
-                  }}
-                />
+                  }} />
+                  {image && <img src={image} alt="" className="h-20 w-20 rounded object-cover" />}
+                </div>
               </div>
             ))}
           </div>
