@@ -4,6 +4,7 @@ import React from "react"
 
 import { use, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Home } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function EditPropertyPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,8 +31,6 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     price: '850000',
     bedrooms: '2',
     bathrooms: '2',
-    sqft: '1200',
-    yearBuilt: '2020',
     features: 'Pool, Garden, Gym, Security, Parking',
   })
 
@@ -67,12 +66,16 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-              <Home className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg text-gray-900">ULO</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <Link href="/" className="ml-2 sm:ml-4 flex items-center">
+            <Image
+              src="/ulo-logo.png"
+              alt="ULO"
+              width={212}
+              height={64}
+              className="h-14 w-auto"
+              priority
+            />
           </Link>
           <Link href="/dashboard">
             <Button
@@ -107,20 +110,22 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
                   Basic Information
                 </h2>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Property Title *
-                    </label>
-                    <Input
-                      type="text"
-                      name="title"
-                      placeholder="e.g., Modern Downtown Loft"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      required
-                      className="h-11"
-                    />
-                  </div>
+                  {formData.type !== 'Land' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Property Title *
+                      </label>
+                      <Input
+                        type="text"
+                        name="title"
+                        placeholder="e.g., Modern Downtown Loft"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        required
+                        className="h-11"
+                      />
+                    </div>
+                  ) : null}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -170,7 +175,6 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
                       <SelectContent>
                         <SelectItem value="For Sale">For Sale</SelectItem>
                         <SelectItem value="For Rent">For Rent</SelectItem>
-                        <SelectItem value="Commercial">Commercial</SelectItem>
                         <SelectItem value="Land">Land</SelectItem>
                         <SelectItem value="Shortlet">Shortlet</SelectItem>
                       </SelectContent>
@@ -192,64 +196,39 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bedrooms *
-                    </label>
-                    <Input
-                      type="number"
-                      name="bedrooms"
-                      placeholder="0"
-                      value={formData.bedrooms}
-                      onChange={handleInputChange}
-                      required
-                      className="h-11"
-                    />
-                  </div>
+                  {formData.type !== 'Land' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Bedrooms *
+                      </label>
+                      <Input
+                        type="number"
+                        name="bedrooms"
+                        placeholder="0"
+                        value={formData.bedrooms}
+                        onChange={handleInputChange}
+                        required
+                        className="h-11"
+                      />
+                    </div>
+                  ) : null}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bathrooms *
-                    </label>
-                    <Input
-                      type="number"
-                      name="bathrooms"
-                      placeholder="0"
-                      value={formData.bathrooms}
-                      onChange={handleInputChange}
-                      required
-                      className="h-11"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Square Feet *
-                    </label>
-                    <Input
-                      type="number"
-                      name="sqft"
-                      placeholder="0"
-                      value={formData.sqft}
-                      onChange={handleInputChange}
-                      required
-                      className="h-11"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Year Built
-                    </label>
-                    <Input
-                      type="number"
-                      name="yearBuilt"
-                      placeholder="2024"
-                      value={formData.yearBuilt}
-                      onChange={handleInputChange}
-                      className="h-11"
-                    />
-                  </div>
+                  {formData.type !== 'Land' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Bathrooms *
+                      </label>
+                      <Input
+                        type="number"
+                        name="bathrooms"
+                        placeholder="0"
+                        value={formData.bathrooms}
+                        onChange={handleInputChange}
+                        required
+                        className="h-11"
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

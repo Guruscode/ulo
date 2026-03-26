@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -14,6 +15,7 @@ import {
   Settings,
   Home,
   Building2,
+  MapPin,
   Users,
   FileText,
   BarChart3,
@@ -47,6 +49,7 @@ const navItems = [
   { id: 'hotels', label: 'Hotels', icon: Building2, href: '/admin/hotels' },
   { id: 'agents', label: 'Agents', icon: User, href: '/admin/agents' },
   { id: 'blog', label: 'Blog', icon: FileText, href: '/admin/blog' },
+  { id: 'neighbourhoods', label: 'Neighbourhoods', icon: MapPin, href: '/admin/neighbourhoods' },
   { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, href: '/admin/subscriptions' },
 ]
 
@@ -81,12 +84,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex flex-col h-full bg-slate-900">
       {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-slate-700">
-        <Link href="/admin" className="flex items-center gap-2" onClick={() => isMobile && setMobileMenuOpen(false)}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-bold text-lg text-white">Admin Panel</span>
+      <div className="h-20 flex items-center justify-between px-4 border-b border-slate-700">
+        <Link href="/admin" className="ml-2 flex items-center" onClick={() => isMobile && setMobileMenuOpen(false)}>
+          <Image
+            src="/logo-transperient.png"
+            alt="ULO Admin"
+            width={212}
+            height={64}
+            className="h-14 w-auto"
+            priority
+          />
         </Link>
         {isMobile && (
           <button onClick={() => setMobileMenuOpen(false)} className="p-2">

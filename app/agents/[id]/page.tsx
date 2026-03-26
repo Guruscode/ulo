@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft, Mail, MapPin, Phone } from 'lucide-react'
 
 import HomeFooter from '@/components/home/home-footer'
@@ -11,6 +12,8 @@ import { Card } from '@/components/ui/card'
 import { ApiClientError } from '@/lib/client/api-error'
 import { getAgentRequest } from '@/lib/client/users-client'
 import type { AuthUser } from '@/lib/auth/types'
+
+const DEFAULT_AGENT_IMAGE = '/logo-transperient.png'
 
 export default function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -59,8 +62,14 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-[260px_1fr]">
           <Card className="flex items-center justify-center p-10">
-            <div className="flex h-40 w-40 items-center justify-center rounded-full bg-secondary/10 text-6xl font-bold text-secondary">
-              {agent.name.charAt(0)}
+            <div className="relative h-40 w-40 overflow-hidden rounded-full bg-secondary/10 ring-4 ring-secondary/10">
+              <Image
+                src={agent.profileImageUrl || DEFAULT_AGENT_IMAGE}
+                alt={agent.name}
+                fill
+                className={agent.profileImageUrl ? 'object-cover' : 'object-contain p-5'}
+                sizes="160px"
+              />
             </div>
           </Card>
 

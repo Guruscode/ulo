@@ -1,5 +1,8 @@
 import { getDbClient } from '@/lib/server/db/client'
+import { ensureBlogsTableSchema } from '@/lib/server/db/blog-schema'
+import { seedBlogsIfNeeded } from '@/lib/server/blog/service'
 import { seedHotelsIfNeeded } from '@/lib/server/hotels/service'
+import { seedNeighbourhoodsIfNeeded } from '@/lib/server/neighbourhoods/service'
 import { seedPropertiesIfNeeded } from '@/lib/server/properties/service'
 import { seedSubscriptionPlansIfNeeded } from '@/lib/server/subscriptions/service'
 
@@ -10,6 +13,7 @@ const USER_COLUMNS = [
   { name: 'id', sql: `ALTER TABLE users ADD COLUMN id TEXT` },
   { name: 'name', sql: `ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''` },
   { name: 'email', sql: `ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''` },
+  { name: 'profile_image_url', sql: `ALTER TABLE users ADD COLUMN profile_image_url TEXT` },
   { name: 'phone', sql: `ALTER TABLE users ADD COLUMN phone TEXT` },
   { name: 'address', sql: `ALTER TABLE users ADD COLUMN address TEXT` },
   { name: 'state', sql: `ALTER TABLE users ADD COLUMN state TEXT` },
@@ -121,13 +125,11 @@ const PROPERTY_COLUMNS = [
   { name: 'longitude', sql: `ALTER TABLE properties ADD COLUMN longitude REAL` },
   { name: 'price_value', sql: `ALTER TABLE properties ADD COLUMN price_value INTEGER NOT NULL DEFAULT 0` },
   { name: 'currency', sql: `ALTER TABLE properties ADD COLUMN currency TEXT NOT NULL DEFAULT 'NGN'` },
-  { name: 'pricing_period', sql: `ALTER TABLE properties ADD COLUMN pricing_period TEXT NOT NULL DEFAULT 'one-time'` },
+  { name: 'pricing_period', sql: `ALTER TABLE properties ADD COLUMN pricing_period TEXT NOT NULL DEFAULT 'sale'` },
   { name: 'type', sql: `ALTER TABLE properties ADD COLUMN type TEXT NOT NULL DEFAULT 'For Sale'` },
   { name: 'listed_by', sql: `ALTER TABLE properties ADD COLUMN listed_by TEXT NOT NULL DEFAULT 'Agent'` },
   { name: 'bedrooms', sql: `ALTER TABLE properties ADD COLUMN bedrooms INTEGER NOT NULL DEFAULT 0` },
   { name: 'bathrooms', sql: `ALTER TABLE properties ADD COLUMN bathrooms REAL NOT NULL DEFAULT 0` },
-  { name: 'sqft', sql: `ALTER TABLE properties ADD COLUMN sqft INTEGER NOT NULL DEFAULT 0` },
-  { name: 'year_built', sql: `ALTER TABLE properties ADD COLUMN year_built INTEGER` },
   { name: 'features_json', sql: `ALTER TABLE properties ADD COLUMN features_json TEXT NOT NULL DEFAULT '[]'` },
   { name: 'image_urls_json', sql: `ALTER TABLE properties ADD COLUMN image_urls_json TEXT NOT NULL DEFAULT '[]'` },
   { name: 'video_url', sql: `ALTER TABLE properties ADD COLUMN video_url TEXT` },
@@ -188,10 +190,14 @@ async function ensurePropertiesTableSchema() {
   const result = await db.execute(`PRAGMA table_info(properties)`)
   const existingColumns = new Set(result.rows.map((row) => String(row.name)))
   const idColumn = result.rows.find((row) => String(row.name) === 'id')
+  const needsRebuild =
+    (idColumn && String(idColumn.type || '').toUpperCase().includes('INT')) ||
+    existingColumns.has('sqft') ||
+    existingColumns.has('year_built')
 
   // Older databases used an integer primary key for properties.id, which breaks
   // the current UUID-based inserts with SQLITE_MISMATCH. Rebuild into the current schema.
-  if (idColumn && String(idColumn.type || '').toUpperCase().includes('INT')) {
+  if (needsRebuild) {
     await db.execute(`ALTER TABLE properties RENAME TO properties_legacy`)
     await db.execute(`
       CREATE TABLE properties (
@@ -204,13 +210,11 @@ async function ensurePropertiesTableSchema() {
         longitude REAL,
         price_value INTEGER NOT NULL,
         currency TEXT NOT NULL CHECK (currency IN ('USD', 'NGN')),
-        pricing_period TEXT NOT NULL CHECK (pricing_period IN ('one-time', 'month', 'week', 'day')),
-        type TEXT NOT NULL CHECK (type IN ('For Sale', 'For Rent', 'Commercial', 'Land', 'Shortlet')),
+        pricing_period TEXT NOT NULL CHECK (pricing_period IN ('sale', 'monthly', '6-months', 'annually', '2-years', '5-years', 'per-day', '3-days', 'per-week', 'per-month')),
+        type TEXT NOT NULL CHECK (type IN ('For Sale', 'For Rent', 'Land', 'Shortlet')),
         listed_by TEXT NOT NULL CHECK (listed_by IN ('Agent', 'Landlord', 'Dealer', 'Owner')),
         bedrooms INTEGER NOT NULL DEFAULT 0,
         bathrooms REAL NOT NULL DEFAULT 0,
-        sqft INTEGER NOT NULL DEFAULT 0,
-        year_built INTEGER,
         features_json TEXT NOT NULL DEFAULT '[]',
         image_urls_json TEXT NOT NULL DEFAULT '[]',
         video_url TEXT,
@@ -236,7 +240,7 @@ async function ensurePropertiesTableSchema() {
     await db.execute(`
       INSERT INTO properties (
         id, title, location, full_address, estate, latitude, longitude, price_value, currency, pricing_period,
-        type, listed_by, bedrooms, bathrooms, sqft, year_built, features_json, image_urls_json, video_url,
+        type, listed_by, bedrooms, bathrooms, features_json, image_urls_json, video_url,
         reference_code, document_info, contact_name, contact_phone, contact_email, verification_status,
         approval_status, status, disclaimer_accepted, description, featured, created_by_user_id,
         approved_by_user_id, approved_at, rejection_reason, created_at, updated_at
@@ -251,13 +255,25 @@ async function ensurePropertiesTableSchema() {
         longitude,
         COALESCE(price_value, 0),
         COALESCE(currency, 'NGN'),
-        COALESCE(pricing_period, 'one-time'),
-        COALESCE(type, 'For Sale'),
+        CASE
+          WHEN COALESCE(type, 'For Sale') = 'For Rent' AND COALESCE(pricing_period, 'monthly') IN ('month', 'monthly') THEN 'monthly'
+          WHEN COALESCE(type, 'For Rent') = 'For Rent' AND pricing_period = '6-months' THEN '6-months'
+          WHEN COALESCE(type, 'For Rent') = 'For Rent' AND pricing_period IN ('year', 'annually') THEN 'annually'
+          WHEN COALESCE(type, 'For Rent') = 'For Rent' AND pricing_period = '2-years' THEN '2-years'
+          WHEN COALESCE(type, 'For Rent') = 'For Rent' AND pricing_period = '5-years' THEN '5-years'
+          WHEN COALESCE(type, 'For Sale') = 'Shortlet' AND COALESCE(pricing_period, 'per-day') IN ('day', 'per-day') THEN 'per-day'
+          WHEN COALESCE(type, 'For Sale') = 'Shortlet' AND pricing_period = '3-days' THEN '3-days'
+          WHEN COALESCE(type, 'For Sale') = 'Shortlet' AND COALESCE(pricing_period, '') IN ('week', 'per-week') THEN 'per-week'
+          WHEN COALESCE(type, 'For Sale') = 'Shortlet' AND COALESCE(pricing_period, '') IN ('month', 'per-month') THEN 'per-month'
+          ELSE 'sale'
+        END,
+        CASE
+          WHEN COALESCE(type, 'For Sale') = 'Commercial' THEN 'For Sale'
+          ELSE COALESCE(type, 'For Sale')
+        END,
         COALESCE(listed_by, 'Agent'),
-        COALESCE(bedrooms, 0),
-        COALESCE(bathrooms, 0),
-        COALESCE(sqft, 0),
-        year_built,
+        CASE WHEN COALESCE(type, 'For Sale') = 'Land' THEN 0 ELSE COALESCE(bedrooms, 0) END,
+        CASE WHEN COALESCE(type, 'For Sale') = 'Land' THEN 0 ELSE COALESCE(bathrooms, 0) END,
         COALESCE(NULLIF(features_json, ''), '[]'),
         COALESCE(NULLIF(image_urls_json, ''), '[]'),
         video_url,
@@ -492,6 +508,80 @@ async function ensureSubscriptionSchema() {
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status);`)
 }
 
+async function ensureNeighbourhoodSchema() {
+  const db = getDbClient()
+  const neighbourhoodDefinitions = [
+    { name: 'id', sql: `ALTER TABLE neighbourhoods ADD COLUMN id TEXT` },
+    { name: 'slug', sql: `ALTER TABLE neighbourhoods ADD COLUMN slug TEXT NOT NULL DEFAULT ''` },
+    { name: 'name', sql: `ALTER TABLE neighbourhoods ADD COLUMN name TEXT NOT NULL DEFAULT ''` },
+    { name: 'description', sql: `ALTER TABLE neighbourhoods ADD COLUMN description TEXT NOT NULL DEFAULT ''` },
+    { name: 'full_description', sql: `ALTER TABLE neighbourhoods ADD COLUMN full_description TEXT NOT NULL DEFAULT ''` },
+    { name: 'image', sql: `ALTER TABLE neighbourhoods ADD COLUMN image TEXT NOT NULL DEFAULT ''` },
+    { name: 'latitude', sql: `ALTER TABLE neighbourhoods ADD COLUMN latitude TEXT NOT NULL DEFAULT ''` },
+    { name: 'longitude', sql: `ALTER TABLE neighbourhoods ADD COLUMN longitude TEXT NOT NULL DEFAULT ''` },
+    { name: 'amenities_json', sql: `ALTER TABLE neighbourhoods ADD COLUMN amenities_json TEXT NOT NULL DEFAULT '[]'` },
+    { name: 'highlights_json', sql: `ALTER TABLE neighbourhoods ADD COLUMN highlights_json TEXT NOT NULL DEFAULT '[]'` },
+    { name: 'population', sql: `ALTER TABLE neighbourhoods ADD COLUMN population TEXT NOT NULL DEFAULT ''` },
+    { name: 'avg_income', sql: `ALTER TABLE neighbourhoods ADD COLUMN avg_income TEXT NOT NULL DEFAULT ''` },
+    { name: 'avg_age', sql: `ALTER TABLE neighbourhoods ADD COLUMN avg_age TEXT NOT NULL DEFAULT ''` },
+    { name: 'phases_json', sql: `ALTER TABLE neighbourhoods ADD COLUMN phases_json TEXT NOT NULL DEFAULT '[]'` },
+    { name: 'created_at', sql: `ALTER TABLE neighbourhoods ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+    { name: 'updated_at', sql: `ALTER TABLE neighbourhoods ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  ] as const
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS neighbourhoods (
+      id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      full_description TEXT NOT NULL,
+      image TEXT NOT NULL,
+      latitude TEXT NOT NULL,
+      longitude TEXT NOT NULL,
+      amenities_json TEXT NOT NULL DEFAULT '[]',
+      highlights_json TEXT NOT NULL DEFAULT '[]',
+      population TEXT NOT NULL DEFAULT '',
+      avg_income TEXT NOT NULL DEFAULT '',
+      avg_age TEXT NOT NULL DEFAULT '',
+      phases_json TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  const info = await db.execute(`PRAGMA table_info(neighbourhoods)`)
+  const existingColumns = new Set(info.rows.map((row) => String(row.name)))
+
+  for (const column of neighbourhoodDefinitions) {
+    if (!existingColumns.has(column.name)) {
+      await db.execute(column.sql)
+    }
+  }
+
+  await db.execute(`
+    UPDATE neighbourhoods
+    SET
+      slug = COALESCE(slug, ''),
+      name = COALESCE(name, ''),
+      description = COALESCE(description, ''),
+      full_description = COALESCE(full_description, ''),
+      image = COALESCE(image, ''),
+      latitude = COALESCE(latitude, ''),
+      longitude = COALESCE(longitude, ''),
+      amenities_json = COALESCE(NULLIF(amenities_json, ''), '[]'),
+      highlights_json = COALESCE(NULLIF(highlights_json, ''), '[]'),
+      population = COALESCE(population, ''),
+      avg_income = COALESCE(avg_income, ''),
+      avg_age = COALESCE(avg_age, ''),
+      phases_json = COALESCE(NULLIF(phases_json, ''), '[]'),
+      created_at = COALESCE(created_at, CURRENT_TIMESTAMP),
+      updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)
+  `)
+
+  await db.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_neighbourhoods_slug ON neighbourhoods(slug);`)
+}
+
 export async function initializeDatabase() {
   if (initialized) {
     return
@@ -540,13 +630,11 @@ export async function initializeDatabase() {
             longitude REAL,
             price_value INTEGER NOT NULL,
             currency TEXT NOT NULL CHECK (currency IN ('USD', 'NGN')),
-            pricing_period TEXT NOT NULL CHECK (pricing_period IN ('one-time', 'month', 'week', 'day')),
-            type TEXT NOT NULL CHECK (type IN ('For Sale', 'For Rent', 'Commercial', 'Land', 'Shortlet')),
+            pricing_period TEXT NOT NULL CHECK (pricing_period IN ('sale', 'monthly', '6-months', 'annually', '2-years', '5-years', 'per-day', '3-days', 'per-week', 'per-month')),
+            type TEXT NOT NULL CHECK (type IN ('For Sale', 'For Rent', 'Land', 'Shortlet')),
             listed_by TEXT NOT NULL CHECK (listed_by IN ('Agent', 'Landlord', 'Dealer', 'Owner')),
             bedrooms INTEGER NOT NULL DEFAULT 0,
             bathrooms REAL NOT NULL DEFAULT 0,
-            sqft INTEGER NOT NULL DEFAULT 0,
-            year_built INTEGER,
             features_json TEXT NOT NULL DEFAULT '[]',
             image_urls_json TEXT NOT NULL DEFAULT '[]',
             video_url TEXT,
@@ -714,17 +802,23 @@ export async function initializeDatabase() {
     )
 
     await ensureUsersTableSchema()
+    await ensureBlogsTableSchema()
     await ensurePropertiesTableSchema()
     await ensureHotelsTableSchema()
     await ensureSignupVerificationsTableSchema()
     await ensureSavedPropertiesSchema()
     await ensureSubscriptionSchema()
+    await ensureNeighbourhoodSchema()
 
     initialized = true
+    await seedBlogsIfNeeded()
+    await seedNeighbourhoodsIfNeeded()
     await seedPropertiesIfNeeded()
     await seedHotelsIfNeeded()
     await seedSubscriptionPlansIfNeeded()
   })()
+
+
 
   try {
     await initializationPromise

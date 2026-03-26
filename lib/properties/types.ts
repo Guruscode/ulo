@@ -1,8 +1,18 @@
 import type { UserRole } from '@/lib/auth/types'
 
 export type PropertyCurrency = 'USD' | 'NGN'
-export type PropertyPricingPeriod = 'one-time' | 'month' | 'week' | 'day'
-export type PropertyType = 'For Sale' | 'For Rent' | 'Commercial' | 'Land' | 'Shortlet'
+export type PropertyPricingPeriod =
+  | 'sale'
+  | 'monthly'
+  | '6-months'
+  | 'annually'
+  | '2-years'
+  | '5-years'
+  | 'per-day'
+  | '3-days'
+  | 'per-week'
+  | 'per-month'
+export type PropertyType = 'For Sale' | 'For Rent' | 'Land' | 'Shortlet'
 export type PropertyPosterType = 'Agent' | 'Landlord' | 'Dealer' | 'Owner'
 export type PropertyVerificationStatus = 'not_requested' | 'requested' | 'verified'
 export type PropertyApprovalStatus = 'draft' | 'pending_review' | 'approved' | 'rejected'
@@ -28,8 +38,6 @@ export interface PropertyRecord {
   listedBy: PropertyPosterType
   bedrooms: number
   bathrooms: number
-  sqft: number
-  yearBuilt: number | null
   features: string[]
   imageUrls: string[]
   videoUrl: string | null
@@ -79,8 +87,6 @@ export interface PropertyUpsertInput {
   listedBy: PropertyPosterType
   bedrooms: number
   bathrooms: number
-  sqft: number
-  yearBuilt?: number | null
   features: string[]
   imageUrls: string[]
   videoUrl?: string | null

@@ -63,6 +63,7 @@ const loginSchema = z.object({
 const profileSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters.'),
   email: z.string().trim().email('A valid email is required.'),
+  profileImageUrl: z.string().trim().optional().nullable().or(z.literal('')),
   phone: z.string().trim().optional().or(z.literal('')),
   address: z.string().trim().optional().or(z.literal('')),
   state: z.string().trim().optional().or(z.literal('')),
@@ -96,6 +97,7 @@ function toAuthUser(user: UserRecord): AuthUser {
     id: user.id,
     name: user.name,
     email: user.email,
+    profileImageUrl: user.profileImageUrl ?? null,
     role: user.role,
     accountType: user.accountType,
     status: user.status,
@@ -323,6 +325,7 @@ export async function updateAuthenticatedUserProfile(userId: string, input: unkn
   const updatedUser = await updateUserProfile(userId, {
     name: parsed.data.name,
     email: parsed.data.email,
+    profileImageUrl: parsed.data.profileImageUrl || null,
     phone: parsed.data.phone || null,
     address: parsed.data.address || null,
     state: parsed.data.state || null,

@@ -42,8 +42,8 @@ const featureProperties = [
   {
     id: 5,
     title: 'Land',
-    image: 'https://image2url.com/r2/default/images/1773914943604-90e15d24-ae91-4327-98fb-4f548eaa8d19.jpg',
-    thumbnail: 'https://image2url.com/r2/default/images/1773914943604-90e15d24-ae91-4327-98fb-4f548eaa8d19.jpg',
+    image: 'https://images.pexels.com/photos/5474825/pexels-photo-5474825.jpeg',
+    thumbnail: 'https://images.pexels.com/photos/5474825/pexels-photo-5474825.jpeg',
   },
 ]
 
@@ -149,7 +149,7 @@ export default function HomeHero({
                     <option value="House" className="text-gray-900">House</option>
                     <option value="Apartment" className="text-gray-900">Apartment</option>
                     <option value="Villa" className="text-gray-900">Villa</option>
-                    <option value="Commercial" className="text-gray-900">Commercial</option>
+                    <option value="Shortlet" className="text-gray-900">Shortlet</option>
                     <option value="Land" className="text-gray-900">Land</option>
                   </select>
 

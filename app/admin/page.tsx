@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Building2, FileText, Home, MessageSquare, Plus, Users } from 'lucide-react'
+import { Building2, FileText, Home, MapPin, MessageSquare, Plus, Users } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 import { LiveAdminDashboard } from '@/components/admin/live-admin-dashboard'
@@ -15,6 +15,7 @@ const quickLinks = [
   { label: 'Add Property', href: '/admin/properties', icon: Home },
   { label: 'Add Hotel', href: '/admin/hotels', icon: Building2 },
   { label: 'Add Blog Post', href: '/admin/blog', icon: FileText },
+  { label: 'Add Neighbourhood', href: '/admin/neighbourhoods', icon: MapPin },
 ]
 
 const recentActivities = [

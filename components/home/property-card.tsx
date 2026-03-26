@@ -143,7 +143,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               {property.bathrooms > 0 && (
                 <div>{property.bathrooms} Baths</div>
               )}
-              <div>{property.sqft} sqft</div>
             </div>
 
             <div className="flex items-center justify-between text-xs pt-3 border-t border-border">

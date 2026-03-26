@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/auth-provider'
 import { AuthenticatedUserMenu } from '@/components/auth/authenticated-user-menu'
@@ -49,11 +50,17 @@ export default function HomeNav() {
       {/* Transparent gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-transparent h-20" />
       
-      <div className="relative max-w-full mx-auto px-8 lg:px-16 h-20 flex items-center justify-between">
+      <div className="relative max-w-full mx-auto px-6 sm:px-8 lg:px-16 h-20 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 z-10 group">
-       
-          <span className="text-white font-bold text-xl tracking-tight hidden sm:inline">ULO</span>
+        <Link href="/" className="z-10 ml-2 sm:ml-4 lg:ml-6 group">
+          <Image
+            src="/logo-transperient.png"
+            alt="ULO"
+            width={212}
+            height={64}
+            className="h-14 w-auto sm:h-16"
+            priority
+          />
         </Link>
 
         {/* Desktop nav */}

@@ -4,12 +4,13 @@ import React from 'react'
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Landmark, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useAuth } from '@/components/providers/auth-provider'
@@ -127,14 +128,18 @@ export default function SignupPageClient() {
   return (
     <div className="min-h-screen flex">
       <div className="hidden lg:flex lg:w-1/2 relative">
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('https://image2url.com/r2/default/images/1773914396351-4ebaafbd-d8ad-4006-aa20-3fbeb0d83d97.jpg')" }} />
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('https://images.pexels.com/photos/7546323/pexels-photo-7546323.jpeg')" }} />
         <div className="absolute inset-0 bg-black/50" />
         <div className="relative z-10 flex flex-col items-center justify-center w-full h-full px-12 text-center text-white">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-              <Landmark className="w-7 h-7 text-white" />
-            </div>
-            <span className="text-3xl font-bold tracking-tight">ULO</span>
+          <div className="mb-8">
+            <Image
+              src="/logo-transperient.png"
+              alt="ULO"
+              width={220}
+              height={72}
+              className="h-16 w-auto"
+              priority
+            />
           </div>
           <h2 className="text-4xl font-serif font-bold mb-4">Start your property journey today</h2>
           <p className="text-white/80 text-lg max-w-md">
@@ -144,11 +149,15 @@ export default function SignupPageClient() {
       </div>
 
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-16 py-12 bg-white">
-        <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center">
-            <Landmark className="w-6 h-6 text-white" />
-          </div>
-          <span className="text-2xl font-bold text-gray-900">ULO</span>
+        <div className="lg:hidden flex items-center justify-center mb-8">
+          <Image
+            src="/ulo-logo.png"
+            alt="ULO"
+            width={220}
+            height={72}
+            className="h-14 w-auto"
+            priority
+          />
         </div>
 
         <div className="w-full max-w-md mx-auto">

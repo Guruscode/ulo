@@ -29,7 +29,7 @@ import {
 import { seededProperties } from '@/lib/server/properties/seed-data'
 
 const propertySchema = z.object({
-  title: z.string().trim().min(3, 'Title must be at least 3 characters.'),
+  title: z.string().trim().optional().default(''),
   location: z.string().trim().min(2, 'Location is required.'),
   fullAddress: z.string().trim().min(5, 'Full address is required.'),
   estate: z.string().trim().optional().nullable(),
@@ -37,13 +37,22 @@ const propertySchema = z.object({
   longitude: z.number().nullable().optional(),
   priceValue: z.number().int().positive('Price must be greater than zero.'),
   currency: z.enum(['USD', 'NGN']),
-  pricingPeriod: z.enum(['one-time', 'month', 'week', 'day']),
-  type: z.enum(['For Sale', 'For Rent', 'Commercial', 'Land', 'Shortlet']),
+  pricingPeriod: z.enum([
+    'sale',
+    'monthly',
+    '6-months',
+    'annually',
+    '2-years',
+    '5-years',
+    'per-day',
+    '3-days',
+    'per-week',
+    'per-month',
+  ]),
+  type: z.enum(['For Sale', 'For Rent', 'Land', 'Shortlet']),
   listedBy: z.enum(['Agent', 'Landlord', 'Dealer', 'Owner']),
   bedrooms: z.number().min(0),
   bathrooms: z.number().min(0),
-  sqft: z.number().int().positive('Square footage must be greater than zero.'),
-  yearBuilt: z.number().int().min(1900).max(2100).nullable().optional(),
   features: z.array(z.string().trim().min(1)).min(1, 'Add at least one feature.'),
   imageUrls: z
     .array(z.string().trim().url('Each image must be a valid URL.'))
@@ -60,6 +69,67 @@ const propertySchema = z.object({
   description: z.string().trim().min(20, 'Description must be at least 20 characters.'),
   status: z.enum(['active', 'sold', 'pending']),
   featured: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+  const rentPricingPeriods = ['monthly', '6-months', 'annually', '2-years', '5-years']
+  const shortletPricingPeriods = ['per-day', '3-days', 'per-week', 'per-month']
+
+  if (data.type === 'Land') {
+    if (data.bedrooms !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['bedrooms'],
+        message: 'Land listings cannot have bedrooms.',
+      })
+    }
+
+    if (data.bathrooms !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['bathrooms'],
+        message: 'Land listings cannot have bathrooms.',
+      })
+    }
+
+    if (data.pricingPeriod !== 'sale') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['pricingPeriod'],
+        message: 'Land listings use a single sale price.',
+      })
+    }
+  }
+
+  if (data.type === 'For Sale' && data.pricingPeriod !== 'sale') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pricingPeriod'],
+      message: 'For sale listings use a single sale price.',
+    })
+  }
+
+  if (data.type === 'For Rent' && !rentPricingPeriods.includes(data.pricingPeriod)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pricingPeriod'],
+      message: 'Select a valid rent pricing model.',
+    })
+  }
+
+  if (data.type === 'Shortlet' && !shortletPricingPeriods.includes(data.pricingPeriod)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pricingPeriod'],
+      message: 'Select a valid shortlet pricing model.',
+    })
+  }
+
+  if (data.type !== 'Land' && data.title.trim().length < 3) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['title'],
+      message: 'Title must be at least 3 characters.',
+    })
+  }
 })
 
 function normalizeUpsertInput(input: unknown): PropertyUpsertInput {
@@ -70,7 +140,10 @@ function normalizeUpsertInput(input: unknown): PropertyUpsertInput {
   }
 
   return {
-    title: parsed.data.title,
+    title:
+      parsed.data.type === 'Land'
+        ? `Land in ${parsed.data.location.trim()}`
+        : parsed.data.title.trim(),
     location: parsed.data.location,
     fullAddress: parsed.data.fullAddress,
     estate: parsed.data.estate || null,
@@ -81,10 +154,8 @@ function normalizeUpsertInput(input: unknown): PropertyUpsertInput {
     pricingPeriod: parsed.data.pricingPeriod,
     type: parsed.data.type,
     listedBy: parsed.data.listedBy,
-    bedrooms: parsed.data.bedrooms,
-    bathrooms: parsed.data.bathrooms,
-    sqft: parsed.data.sqft,
-    yearBuilt: parsed.data.yearBuilt ?? null,
+    bedrooms: parsed.data.type === 'Land' ? 0 : parsed.data.bedrooms,
+    bathrooms: parsed.data.type === 'Land' ? 0 : parsed.data.bathrooms,
     features: parsed.data.features,
     imageUrls: parsed.data.imageUrls,
     videoUrl: parsed.data.videoUrl || null,
@@ -163,7 +234,6 @@ export async function seedPropertiesIfNeeded() {
       estate: seed.estate ?? null,
       latitude: seed.latitude ?? null,
       longitude: seed.longitude ?? null,
-      yearBuilt: seed.yearBuilt ?? null,
       videoUrl: seed.videoUrl ?? null,
       documentInfo: seed.documentInfo ?? null,
       verificationStatus: seed.verificationStatus ?? 'not_requested',
@@ -221,7 +291,6 @@ export async function createPropertyForActor(input: unknown, actor: AuthUser) {
     estate: normalized.estate ?? null,
     latitude: normalized.latitude ?? null,
     longitude: normalized.longitude ?? null,
-    yearBuilt: normalized.yearBuilt ?? null,
     videoUrl: normalized.videoUrl ?? null,
     documentInfo: normalized.documentInfo ?? null,
     verificationStatus: normalized.verificationStatus ?? 'not_requested',

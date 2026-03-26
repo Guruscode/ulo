@@ -147,10 +147,9 @@ export default function ListingsContent() {
                         <MapPin className="w-4 h-4 flex-shrink-0" />
                         <p className="text-sm line-clamp-1">{property.location}</p>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100 text-sm">
-                        <div><p className="text-gray-500 text-xs">Beds</p><p className="font-medium text-gray-900">{property.bedrooms}</p></div>
-                        <div><p className="text-gray-500 text-xs">Baths</p><p className="font-medium text-gray-900">{property.bathrooms}</p></div>
-                        <div><p className="text-gray-500 text-xs">Sqft</p><p className="font-medium text-gray-900">{property.sqft}</p></div>
+                      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100 text-sm">
+                        {property.type !== 'Land' ? <div><p className="text-gray-500 text-xs">Beds</p><p className="font-medium text-gray-900">{property.bedrooms}</p></div> : null}
+                        {property.type !== 'Land' ? <div><p className="text-gray-500 text-xs">Baths</p><p className="font-medium text-gray-900">{property.bathrooms}</p></div> : null}
                       </div>
                     </div>
                   </Card>

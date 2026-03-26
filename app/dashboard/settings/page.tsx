@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { User, Shield, Bell, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { FileUpload } from '@/components/ui/file-upload'
 import {
   Select,
   SelectContent,
@@ -26,6 +28,7 @@ import type { AccountType, IdentityType } from '@/lib/auth/types'
 type SettingsForm = {
   name: string
   email: string
+  profileImageUrl: string
   phone: string
   address: string
   state: string
@@ -42,6 +45,7 @@ type SettingsForm = {
 const DEFAULT_SETTINGS: SettingsForm = {
   name: '',
   email: '',
+  profileImageUrl: '',
   phone: '',
   address: '',
   state: '',
@@ -79,6 +83,7 @@ export default function DashboardSettingsPage() {
         setSettings({
           name: response.user.name || '',
           email: response.user.email || '',
+          profileImageUrl: response.user.profileImageUrl || '',
           phone: response.user.phone || '',
           address: response.user.address || '',
           state: response.user.state || '',
@@ -109,6 +114,7 @@ export default function DashboardSettingsPage() {
       const response = await updateAccountRequest({
         name: settings.name,
         email: settings.email,
+        profileImageUrl: settings.profileImageUrl || null,
         phone: settings.phone,
         address: settings.address,
         state: settings.state,
@@ -164,12 +170,44 @@ export default function DashboardSettingsPage() {
 
         <Card className="bg-white p-6">
           <div className="flex items-center gap-6 mb-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-secondary to-secondary flex items-center justify-center">
-              <User className="w-10 h-10 text-white" />
+            <div className="relative h-24 w-24 overflow-hidden rounded-full bg-secondary/10 ring-4 ring-secondary/10">
+              {settings.profileImageUrl ? (
+                <Image
+                  src={settings.profileImageUrl}
+                  alt={user?.name || 'Profile image'}
+                  fill
+                  className="object-cover"
+                  sizes="96px"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-secondary to-secondary">
+                  <User className="w-10 h-10 text-white" />
+                </div>
+              )}
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-semibold text-gray-900 text-lg">{user?.name || 'Loading...'}</p>
               <p className="text-gray-500">{user?.role === 'admin' ? 'Admin' : settings.accountType.replace('_', ' ')}</p>
+              <div className="mt-4 max-w-xs space-y-3">
+                <FileUpload
+                  id="profile-image-upload"
+                  accept="image/*"
+                  label={settings.profileImageUrl ? 'Change Profile Photo' : 'Upload Profile Photo'}
+                  uploadingLabel="Uploading Photo..."
+                  maxSizeMb={4}
+                  onUpload={(url) => setSettings((current) => ({ ...current, profileImageUrl: url }))}
+                />
+                {settings.profileImageUrl ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-gray-200"
+                    onClick={() => setSettings((current) => ({ ...current, profileImageUrl: '' }))}
+                  >
+                    Remove Photo
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
 

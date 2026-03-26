@@ -1,0 +1,48 @@
+import type { BlogUpsertInput } from './types'
+
+export const seededBlogs: BlogUpsertInput[] = [
+  {
+    slug: 'top-10-luxury-properties-lagos',
+    title: 'Top 10 Luxury Properties in Lagos',
+    excerpt: 'Discover the most luxurious properties currently available in Lagos and what makes them stand out in the premium market.',
+    content: "# Top 10 Luxury Properties in Lagos\n\nLagos continues to be Nigeria's premier destination for luxury real estate...",
+    image: 'https://images.unsplash.com/photo-1564013799919-ab6000278616?w=1200&q=80',
+    category: 'Market Trends',
+    authorId: 'seed-author-1',
+    status: 'published',
+    featured: true,
+  },
+  {
+    slug: 'investment-opportunities-nigerian-real-estate',
+    title: 'Investment Opportunities in Nigerian Real Estate',
+    excerpt: "Explore growing investment opportunities in Nigeria's real estate market and strategies for smart investors.",
+    content: "# Investment Opportunities\n\nNigeria's real estate sector offers...",
+    image: 'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=1200&q=80',
+    category: 'Investment',
+    authorId: 'seed-author-2',
+    status: 'published',
+    featured: false,
+  },
+  {
+    slug: 'first-time-home-buyer-guide',
+    title: 'First-Time Home Buyer Guide',
+    excerpt: 'Everything you need to know before buying your first home, from financing to legal checks.',
+    content: '# First-Time Buyer Guide\n\nBuying your first home...',
+    image: 'https://images.unsplash.com/photo-1560566752-93e91294da23?w=1200&q=80',
+    category: 'Guides',
+    authorId: 'seed-author-1',
+    status: 'published',
+    featured: true,
+  },
+  {
+    slug: 'neighborhood-guide-victoria-island',
+    title: 'Neighborhood Guide: Victoria Island',
+    excerpt: 'A comprehensive guide to living, investing, and enjoying Victoria Island, Lagos.',
+    content: '# Victoria Island Guide\n\nVictoria Island remains...',
+    image: 'https://images.unsplash.com/photo-1558618047-3c8c76fdd9b4?w=1200&q=80',
+    category: 'Neighborhoods',
+    authorId: 'seed-author-3',
+    status: 'draft',
+    featured: false,
+  },
+]

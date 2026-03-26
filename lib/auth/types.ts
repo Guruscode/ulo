@@ -8,6 +8,7 @@ export interface AuthUser {
   id: string
   name: string
   email: string
+  profileImageUrl?: string | null
   role: UserRole
   accountType?: AccountType
   status?: AccountStatus

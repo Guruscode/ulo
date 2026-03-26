@@ -1,16 +1,14 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { getR2SignedUploadUrl } from '@/lib/server/r2';
+import { getCloudinaryUploadSignature } from '@/lib/server/cloudinary';
 
 export async function POST(request: NextRequest) {
   try {
-    const { filename, contentType = 'image/jpeg' } = await request.json();
-    const key = `uploads/${Date.now()}-${filename}`;
-    const url = await getR2SignedUploadUrl(key, contentType);
-    return NextResponse.json({ url });
+    const body = await request.json();
+    const folder = typeof body.folder === 'string' && body.folder.trim() ? body.folder.trim() : 'uploads';
+    const config = getCloudinaryUploadSignature(folder);
+    return NextResponse.json(config);
   } catch (error) {
-    console.error('R2 signed URL error:', error);
-    return NextResponse.json({ error: 'Failed to generate upload URL' }, { status: 500 });
+    console.error('Cloudinary signature error:', error);
+    return NextResponse.json({ error: 'Failed to generate upload signature' }, { status: 500 });
   }
 }
-

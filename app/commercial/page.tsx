@@ -3,9 +3,9 @@ import { PublicPropertyGridPage } from '@/components/properties/public-property-
 export default function CommercialPage() {
   return (
     <PublicPropertyGridPage
-      title="Commercial Properties"
-      description="Explore approved commercial spaces across prime markets."
-      mode="commercial"
+      title="Shortlet Properties"
+      description="Explore approved shortlet stays across prime markets."
+      mode="shortlet"
     />
   )
 }

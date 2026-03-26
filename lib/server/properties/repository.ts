@@ -39,8 +39,6 @@ function mapPropertyRow(row: ResultSet['rows'][number]): PropertyRecord {
     listedBy: row.listed_by as PropertyRecord['listedBy'],
     bedrooms: Number(row.bedrooms),
     bathrooms: Number(row.bathrooms),
-    sqft: Number(row.sqft),
-    yearBuilt: row.year_built === null ? null : Number(row.year_built),
     features: parseStringArray(row.features_json),
     imageUrls: parseStringArray(row.image_urls_json),
     videoUrl: row.video_url ? String(row.video_url) : null,
@@ -135,8 +133,6 @@ function baseSelectSql(currentUserId?: string | null) {
       p.listed_by,
       p.bedrooms,
       p.bathrooms,
-      p.sqft,
-      p.year_built,
       p.features_json,
       p.image_urls_json,
       p.video_url,
@@ -310,8 +306,6 @@ export async function createProperty(input: PropertyRecord) {
         listed_by,
         bedrooms,
         bathrooms,
-        sqft,
-        year_built,
         features_json,
         image_urls_json,
         video_url,
@@ -333,7 +327,7 @@ export async function createProperty(input: PropertyRecord) {
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `,
     args: [
       input.id,
@@ -350,8 +344,6 @@ export async function createProperty(input: PropertyRecord) {
       input.listedBy,
       input.bedrooms,
       input.bathrooms,
-      input.sqft,
-      input.yearBuilt,
       JSON.stringify(input.features),
       JSON.stringify(input.imageUrls),
       input.videoUrl,
@@ -405,8 +397,6 @@ export async function updateProperty(
         listed_by = ?,
         bedrooms = ?,
         bathrooms = ?,
-        sqft = ?,
-        year_built = ?,
         features_json = ?,
         image_urls_json = ?,
         video_url = ?,
@@ -441,8 +431,6 @@ export async function updateProperty(
       input.listedBy,
       input.bedrooms,
       input.bathrooms,
-      input.sqft,
-      input.yearBuilt ?? null,
       JSON.stringify(input.features),
       JSON.stringify(input.imageUrls),
       input.videoUrl ?? null,

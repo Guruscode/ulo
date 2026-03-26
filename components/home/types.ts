@@ -17,7 +17,6 @@ export type Property = {
   currency: PropertyCurrency
   bedrooms: number
   bathrooms: number
-  sqft: string
   image: string
   images?: string[]
   type: PropertyType
@@ -30,7 +29,6 @@ export type Property = {
   estate?: string
   description?: string
   features?: string[]
-  yearBuilt?: number | null
   videoUrl?: string | null
   referenceCode?: string
   contactName?: string

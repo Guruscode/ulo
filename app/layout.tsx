@@ -4,6 +4,7 @@ import Script from 'next/script'
 import { Figtree as Fig_Tree, Geist_Mono } from 'next/font/google'
 
 import { AppProviders } from '@/components/providers/app-providers'
+import CookieBanner from '@/components/site/cookie-banner'
 import './globals.css'
 
 const figTree = Fig_Tree({ subsets: ['latin'], weight: ['400', '500', '600', '700'] })
@@ -23,7 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${figTree.className} antialiased`}>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          {children}
+          <CookieBanner />
+        </AppProviders>
 
         {/* Tawk.to Live Chat */}
         <Script id="tawk-to" strategy="afterInteractive">

@@ -9,18 +9,22 @@ export function formatPropertyPrice(property: Pick<PropertyRecord, 'currency' | 
     maximumFractionDigits: 0,
   }).format(property.priceValue)
 
-  if (property.pricingPeriod === 'one-time') {
-    return formatted
+  const periodLabels: Record<PropertyRecord['pricingPeriod'], string> = {
+    sale: '',
+    monthly: '/ month',
+    '6-months': '/ 6 months',
+    annually: '/ year',
+    '2-years': '/ 2 years',
+    '5-years': '/ 5 years',
+    'per-day': '/ day',
+    '3-days': '/ 3 days',
+    'per-week': '/ week',
+    'per-month': '/ month',
   }
 
-  const periodLabel =
-    property.pricingPeriod === 'month'
-      ? '/ month'
-      : property.pricingPeriod === 'week'
-        ? '/ week'
-        : '/ day'
-
-  return `${formatted} ${periodLabel}`
+  return periodLabels[property.pricingPeriod]
+    ? `${formatted} ${periodLabels[property.pricingPeriod]}`
+    : formatted
 }
 
 export function toHomeProperty(property: PropertyRecord): Property {
@@ -34,7 +38,6 @@ export function toHomeProperty(property: PropertyRecord): Property {
     currency: property.currency,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
-    sqft: property.sqft.toLocaleString(),
     image: resolveImageUrl(property.imageUrls[0], DEFAULT_PROPERTY_IMAGE),
     images:
       property.imageUrls.length > 0
@@ -47,7 +50,6 @@ export function toHomeProperty(property: PropertyRecord): Property {
     isSaved: property.isSaved ?? false,
     description: property.description,
     features: property.features,
-    yearBuilt: property.yearBuilt,
     videoUrl: property.videoUrl,
     referenceCode: property.referenceCode,
     contactName: property.contactName,

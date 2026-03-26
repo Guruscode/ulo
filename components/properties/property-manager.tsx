@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import type { ClipboardEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Eye, Loader2, Pencil, ShieldCheck, Trash2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -28,6 +27,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { FileUpload } from '@/components/ui/file-upload'
 import { ApiClientError } from '@/lib/client/api-error'
 import { DEFAULT_PROPERTY_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
 import {
@@ -47,7 +47,6 @@ type PropertyFieldErrors = Partial<Record<PropertyFieldKey, string[]>>
 
 type PropertyFormState = {
   title: string
-  location: string
   state: string
   city: string
   fullAddress: string
@@ -56,13 +55,21 @@ type PropertyFormState = {
   longitude: string
   priceValue: string
   currency: 'USD' | 'NGN'
-  pricingPeriod: 'one-time' | 'month' | 'week' | 'day'
-  type: 'For Sale' | 'For Rent' | 'Commercial' | 'Land' | 'Shortlet'
+  pricingPeriod:
+    | 'sale'
+    | 'monthly'
+    | '6-months'
+    | 'annually'
+    | '2-years'
+    | '5-years'
+    | 'per-day'
+    | '3-days'
+    | 'per-week'
+    | 'per-month'
+  type: 'For Sale' | 'For Rent' | 'Land' | 'Shortlet'
   listedBy: 'Agent' | 'Landlord' | 'Dealer' | 'Owner'
   bedrooms: string
   bathrooms: string
-  sqft: string
-  yearBuilt: string
   features: string
   imageUrls: [string, string, string, string]
   videoUrl: string
@@ -80,9 +87,39 @@ type PropertyFormState = {
 
 const PROPERTY_TYPES = ['For Sale', 'For Rent', 'Land', 'Shortlet'] as const
 
+const PRICING_PERIOD_OPTIONS = {
+  'For Sale': [{ value: 'sale', label: 'Sale Price' }],
+  'For Rent': [
+    { value: 'monthly', label: 'Monthly' },
+    { value: '6-months', label: '6 Months' },
+    { value: 'annually', label: 'Annually' },
+    { value: '2-years', label: '2 Years' },
+    { value: '5-years', label: '5 Years' },
+  ],
+  Land: [{ value: 'sale', label: 'Sale Price' }],
+  Shortlet: [
+    { value: 'per-day', label: 'Per Day' },
+    { value: '3-days', label: '3 Days' },
+    { value: 'per-week', label: 'Per Week' },
+    { value: 'per-month', label: 'Per Month' },
+  ],
+} as const
+
+function getDefaultPricingPeriod(type: PropertyFormState['type']): PropertyFormState['pricingPeriod'] {
+  return PRICING_PERIOD_OPTIONS[type][0].value
+}
+
+function isLandType(type: PropertyFormState['type']) {
+  return type === 'Land'
+}
+
+function buildLandTitle(state: string, city: string) {
+  const place = [city, state].filter(Boolean).join(', ').trim()
+  return place ? `Land in ${place}` : 'Land Listing'
+}
+
 const EMPTY_FORM: PropertyFormState = {
   title: '',
-  location: '',
   state: '',
   city: '',
   fullAddress: '',
@@ -91,13 +128,11 @@ const EMPTY_FORM: PropertyFormState = {
   longitude: '',
   priceValue: '',
   currency: 'NGN',
-  pricingPeriod: 'one-time',
+  pricingPeriod: 'sale',
   type: 'For Sale',
   listedBy: 'Agent',
   bedrooms: '0',
   bathrooms: '0',
-  sqft: '',
-  yearBuilt: '',
   features: '',
   imageUrls: ['', '', '', ''],
   videoUrl: '',
@@ -120,7 +155,6 @@ function toFormState(property: PropertyRecord): PropertyFormState {
 
   return {
     title: property.title,
-    location: property.location,
     state,
     city,
     fullAddress: property.fullAddress,
@@ -134,8 +168,6 @@ function toFormState(property: PropertyRecord): PropertyFormState {
     listedBy: property.listedBy,
     bedrooms: String(property.bedrooms),
     bathrooms: String(property.bathrooms),
-    sqft: String(property.sqft),
-    yearBuilt: property.yearBuilt === null ? '' : String(property.yearBuilt),
     features: property.features.join(', '),
     imageUrls: [
       property.imageUrls[0] || '',
@@ -158,9 +190,12 @@ function toFormState(property: PropertyRecord): PropertyFormState {
 }
 
 function toRequestPayload(form: PropertyFormState): PropertyUpsertInput {
+  const location = (form.city ? `${form.city}, ${form.state}` : form.state).trim()
+  const typeIsLand = isLandType(form.type)
+
   return {
-    title: form.title.trim(),
-    location: (form.city ? `${form.city}, ${form.state}` : form.state || form.location).trim(),
+    title: typeIsLand ? buildLandTitle(form.state, form.city) : form.title.trim(),
+    location,
     fullAddress: form.fullAddress.trim(),
     estate: form.estate.trim() || null,
     latitude: form.latitude.trim() ? Number(form.latitude) : null,
@@ -170,10 +205,8 @@ function toRequestPayload(form: PropertyFormState): PropertyUpsertInput {
     pricingPeriod: form.pricingPeriod,
     type: form.type,
     listedBy: form.listedBy,
-    bedrooms: Number(form.bedrooms),
-    bathrooms: Number(form.bathrooms),
-    sqft: Number(form.sqft),
-    yearBuilt: form.yearBuilt.trim() ? Number(form.yearBuilt) : null,
+    bedrooms: typeIsLand ? 0 : Number(form.bedrooms),
+    bathrooms: typeIsLand ? 0 : Number(form.bathrooms),
     features: form.features
       .split(',')
       .map((feature) => feature.trim())
@@ -237,8 +270,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
 
   const steps =
     mode === 'dashboard'
-      ? ['Basic Info', 'Property Details', 'Media & Contact', 'Review', 'Subscription']
-      : ['Basic Info', 'Property Details', 'Media & Contact', 'Review']
+      ? ['Property Type', 'Property Details', 'Media & Contact', 'Review', 'Subscription']
+      : ['Property Type', 'Property Details', 'Media & Contact', 'Review']
 
   const loadProperties = async () => {
     setLoading(true)
@@ -273,26 +306,6 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
     const next = [...form.imageUrls] as PropertyFormState['imageUrls']
     next[index] = value
     setForm({ ...form, imageUrls: next })
-  }
-
-  const handleImagePaste = (index: number, event: ClipboardEvent<HTMLInputElement>) => {
-    const pasted = event.clipboardData.getData('text')
-    if (!pasted) return
-    event.preventDefault()
-    updateImageUrlAtIndex(index, pasted.trim())
-  }
-
-  const pasteImageFromClipboard = async (index: number) => {
-    try {
-      const text = await navigator.clipboard.readText()
-      if (!text.trim()) {
-        toast.error('Clipboard is empty.')
-        return
-      }
-      updateImageUrlAtIndex(index, text.trim())
-    } catch {
-      toast.error('Clipboard paste is blocked. Use keyboard paste inside the field.')
-    }
   }
 
   const openCreateForm = () => {
@@ -404,18 +417,28 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
 
   const canGoNext =
     formStep === 0
-      ? Boolean(form.title && form.location && form.fullAddress && form.type)
+      ? Boolean(form.type)
       : formStep === 1
-        ? Boolean(form.priceValue && form.sqft && form.description)
-      : formStep === 2
-        ? form.imageUrls.every(Boolean) &&
-          Boolean(
-            form.contactName &&
-              form.contactPhone &&
-              form.contactEmail &&
-              (mode === 'admin' ? form.disclaimerAccepted : true)
+        ? Boolean(
+            form.state &&
+              form.city &&
+              form.fullAddress &&
+              form.priceValue &&
+              form.description &&
+              form.features.trim() &&
+              (isLandType(form.type) || form.title.trim()) &&
+              (isLandType(form.type) || form.bedrooms !== '') &&
+              (isLandType(form.type) || form.bathrooms !== '')
           )
-        : true
+        : formStep === 2
+          ? form.imageUrls.every(Boolean) &&
+            Boolean(
+              form.contactName &&
+                form.contactPhone &&
+                form.contactEmail &&
+                (mode === 'admin' ? form.disclaimerAccepted : true)
+            )
+          : true
 
   return (
     <div className="space-y-6">
@@ -517,9 +540,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                       {formatPropertyPrice(property)}
                     </p>
                     <div className="grid gap-2 text-sm text-gray-600 md:grid-cols-3">
-                      <p>{property.bedrooms} bed</p>
-                      <p>{property.bathrooms} bath</p>
-                      <p>{property.sqft.toLocaleString()} sqft</p>
+                      {property.type !== 'Land' ? <p>{property.bedrooms} bed</p> : null}
+                      {property.type !== 'Land' ? <p>{property.bathrooms} bath</p> : null}
                       <p>Status: {property.status}</p>
                       <p>Verification: {property.verificationStatus}</p>
                       <p>Code: {property.referenceCode}</p>
@@ -578,7 +600,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
           <DialogHeader>
             <DialogTitle>{editingProperty ? 'Edit Property' : 'Create Property'}</DialogTitle>
             <DialogDescription>
-              Complete the listing carefully. Exactly 4 image URLs are required before submission.
+              Complete the listing carefully. Upload exactly 4 images, each no larger than 4 MB.
             </DialogDescription>
           </DialogHeader>
 
@@ -608,15 +630,22 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
           ) : null}
 
           {formStep === 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
-                {fieldErrors.title?.[0] ? <p className="text-sm text-red-600">{fieldErrors.title[0]}</p> : null}
-              </div>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Property Type</Label>
-                <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value as PropertyFormState['type'] })}>
+                <Select
+                  value={form.type}
+                  onValueChange={(value) =>
+                    setForm({
+                      ...form,
+                      type: value as PropertyFormState['type'],
+                      pricingPeriod: getDefaultPricingPeriod(value as PropertyFormState['type']),
+                      title: value === 'Land' ? '' : form.title,
+                      bedrooms: value === 'Land' ? '0' : form.bedrooms,
+                      bathrooms: value === 'Land' ? '0' : form.bathrooms,
+                    })
+                  }
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PROPERTY_TYPES.map((type) => (
@@ -625,6 +654,23 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="rounded-xl border bg-slate-50 p-4 text-sm text-slate-600">
+                {form.type === 'Land'
+                  ? 'Land listings skip title, bedrooms, bathrooms, and pricing duration. You will only fill the relevant land fields next.'
+                  : `The next step will show only the fields required for ${form.type.toLowerCase()} listings.`}
+              </div>
+            </div>
+          ) : null}
+
+          {formStep === 1 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {!isLandType(form.type) ? (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input id="title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+                  {fieldErrors.title?.[0] ? <p className="text-sm text-red-600">{fieldErrors.title[0]}</p> : null}
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <Label>State</Label>
                 <Select value={form.state} onValueChange={(value) => setForm({ ...form, state: value, city: '' })}>
@@ -662,30 +708,9 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                   <SelectContent>
                     <SelectItem value="Agent">Agent</SelectItem>
                     <SelectItem value="Landlord">Landlord</SelectItem>
-                    {/* <SelectItem value="Dealer">Dealer</SelectItem>
-                    <SelectItem value="Owner">Owner</SelectItem> */}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="fullAddress">Full Address</Label>
-                <Input id="fullAddress" value={form.fullAddress} onChange={(event) => setForm({ ...form, fullAddress: event.target.value })} />
-                {fieldErrors.fullAddress?.[0] ? <p className="text-sm text-red-600">{fieldErrors.fullAddress[0]}</p> : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="estate">Estate / Area (optional)</Label>
-                <Input id="estate" value={form.estate} onChange={(event) => setForm({ ...form, estate: event.target.value })} placeholder="e.g., Victoria Garden City, Lekki Phase 1" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-                {fieldErrors.description?.[0] ? <p className="text-sm text-red-600">{fieldErrors.description[0]}</p> : null}
-              </div>
-            </div>
-          ) : null}
-
-          {formStep === 1 ? (
-            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="priceValue">Price</Label>
                 <Input id="priceValue" type="number" value={form.priceValue} onChange={(event) => setForm({ ...form, priceValue: event.target.value })} />
@@ -706,10 +731,9 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 <Select value={form.pricingPeriod} onValueChange={(value) => setForm({ ...form, pricingPeriod: value as PropertyFormState['pricingPeriod'] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="one-time">One-time</SelectItem>
-                    <SelectItem value="month">Per month</SelectItem>
-                    <SelectItem value="week">Per week</SelectItem>
-                    <SelectItem value="day">Per day</SelectItem>
+                    {PRICING_PERIOD_OPTIONS[form.type].map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -726,22 +750,26 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                   </Select>
                 </div>
               ) : null}
-              <div className="space-y-2">
-                <Label htmlFor="bedrooms">Bedrooms</Label>
-                <Input id="bedrooms" type="number" value={form.bedrooms} onChange={(event) => setForm({ ...form, bedrooms: event.target.value })} />
+              {!isLandType(form.type) ? (
+                <div className="space-y-2">
+                  <Label htmlFor="bedrooms">Bedrooms</Label>
+                  <Input id="bedrooms" type="number" value={form.bedrooms} onChange={(event) => setForm({ ...form, bedrooms: event.target.value })} />
+                </div>
+              ) : null}
+              {!isLandType(form.type) ? (
+                <div className="space-y-2">
+                  <Label htmlFor="bathrooms">Bathrooms</Label>
+                  <Input id="bathrooms" type="number" step="0.5" value={form.bathrooms} onChange={(event) => setForm({ ...form, bathrooms: event.target.value })} />
+                </div>
+              ) : null}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="fullAddress">Full Address</Label>
+                <Input id="fullAddress" value={form.fullAddress} onChange={(event) => setForm({ ...form, fullAddress: event.target.value })} />
+                {fieldErrors.fullAddress?.[0] ? <p className="text-sm text-red-600">{fieldErrors.fullAddress[0]}</p> : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bathrooms">Bathrooms</Label>
-                <Input id="bathrooms" type="number" step="0.5" value={form.bathrooms} onChange={(event) => setForm({ ...form, bathrooms: event.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sqft">Square Footage</Label>
-                <Input id="sqft" type="number" value={form.sqft} onChange={(event) => setForm({ ...form, sqft: event.target.value })} />
-                {fieldErrors.sqft?.[0] ? <p className="text-sm text-red-600">{fieldErrors.sqft[0]}</p> : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="yearBuilt">Year Built</Label>
-                <Input id="yearBuilt" type="number" value={form.yearBuilt} onChange={(event) => setForm({ ...form, yearBuilt: event.target.value })} />
+                <Label htmlFor="estate">Estate / Area (optional)</Label>
+                <Input id="estate" value={form.estate} onChange={(event) => setForm({ ...form, estate: event.target.value })} placeholder="e.g., Victoria Garden City, Lekki Phase 1" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="latitude">Latitude <span className="text-xs text-gray-500">(get from https://www.gps-coordinates.net/)</span></Label>
@@ -755,6 +783,11 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 <Label htmlFor="features">Features</Label>
                 <Textarea id="features" rows={4} value={form.features} onChange={(event) => setForm({ ...form, features: event.target.value })} placeholder="Pool, Gym, Security, Parking" />
                 {fieldErrors.features?.[0] ? <p className="text-sm text-red-600">{fieldErrors.features[0]}</p> : null}
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+                {fieldErrors.description?.[0] ? <p className="text-sm text-red-600">{fieldErrors.description[0]}</p> : null}
               </div>
               {mode === 'admin' ? (
                 <div className="space-y-2">
@@ -786,27 +819,48 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="grid gap-4 md:grid-cols-2">
                 {form.imageUrls.map((imageUrl, index) => (
                   <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor={`image-${index}`}>Image URL {index + 1}</Label>
-                      <Button type="button" variant="outline" size="sm" onClick={() => void pasteImageFromClipboard(index)}>
-                        Paste URL
-                      </Button>
+                    <Label htmlFor={`image-${index}`}>Image {index + 1}</Label>
+                    <div className="space-y-2">
+                      <FileUpload
+                        id={`image-${index}`}
+                        label={`Upload Image ${index + 1} (Max 4 MB)`}
+                        uploadingLabel="Uploading image..."
+                        accept="image/*"
+                        maxSizeMb={4}
+                        onUpload={(url) => updateImageUrlAtIndex(index, url)}
+                      />
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={`Property upload ${index + 1}`}
+                          className="h-28 w-full rounded-lg border object-cover"
+                        />
+                      ) : null}
                     </div>
-                    <Input
-                      id={`image-${index}`}
-                      placeholder="https://example.com/property-image.jpg"
-                      value={imageUrl}
-                      onPaste={(event) => handleImagePaste(index, event)}
-                      onChange={(event) => updateImageUrlAtIndex(index, event.target.value)}
-                    />
                   </div>
                 ))}
               </div>
               {fieldErrors.imageUrls?.[0] ? <p className="text-sm text-red-600">{fieldErrors.imageUrls[0]}</p> : null}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="videoUrl">Neighbourhood / Tour Video URL</Label>
-                  <Input id="videoUrl" value={form.videoUrl} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} />
+                  <Label htmlFor="videoUrl">Neighbourhood / Tour Video</Label>
+                  <div className="space-y-2">
+                    <FileUpload
+                      id="videoUrl"
+                      label="Upload Video (Max 4 MB)"
+                      uploadingLabel="Uploading video..."
+                      accept="video/*"
+                      maxSizeMb={4}
+                      onUpload={(url) => setForm({ ...form, videoUrl: url })}
+                    />
+                    {form.videoUrl ? (
+                      <video
+                        src={form.videoUrl}
+                        controls
+                        className="max-h-52 w-full rounded-lg border bg-black"
+                      />
+                    ) : null}
+                  </div>
                   {fieldErrors.videoUrl?.[0] ? <p className="text-sm text-red-600">{fieldErrors.videoUrl[0]}</p> : null}
                 </div>
                 {mode === 'admin' ? (
@@ -854,10 +908,13 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
 
           {formStep === 3 ? (
             <div className="space-y-4 rounded-xl border bg-slate-50 p-5 text-sm text-slate-700">
-              <p><span className="font-medium text-slate-900">Title:</span> {form.title}</p>
-              <p><span className="font-medium text-slate-900">Location:</span> {form.location}</p>
+              {!isLandType(form.type) ? <p><span className="font-medium text-slate-900">Title:</span> {form.title}</p> : null}
+              <p><span className="font-medium text-slate-900">Location:</span> {[form.city, form.state].filter(Boolean).join(', ')}</p>
               <p><span className="font-medium text-slate-900">Price:</span> {form.priceValue} {form.currency}</p>
+              <p><span className="font-medium text-slate-900">Pricing Model:</span> {PRICING_PERIOD_OPTIONS[form.type].find((option) => option.value === form.pricingPeriod)?.label}</p>
               <p><span className="font-medium text-slate-900">Type:</span> {form.type}</p>
+              {!isLandType(form.type) ? <p><span className="font-medium text-slate-900">Bedrooms:</span> {form.bedrooms}</p> : null}
+              {!isLandType(form.type) ? <p><span className="font-medium text-slate-900">Bathrooms:</span> {form.bathrooms}</p> : null}
               <p><span className="font-medium text-slate-900">Images:</span> {form.imageUrls.filter(Boolean).length} of 4 supplied</p>
               <p><span className="font-medium text-slate-900">Contact:</span> {form.contactName} ({form.contactEmail})</p>
               <p><span className="font-medium text-slate-900">Approval flow:</span> {mode === 'admin' ? 'Admin-created listings can be published immediately.' : 'This listing will stay hidden from the public site until admin approval.'}</p>
@@ -934,9 +991,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                     <p><span className="font-medium text-gray-900">Approval:</span> {viewProperty.approvalStatus}</p>
                     <p><span className="font-medium text-gray-900">Type:</span> {viewProperty.type}</p>
                     <p><span className="font-medium text-gray-900">Listed by:</span> {viewProperty.listedBy}</p>
-                    <p><span className="font-medium text-gray-900">Bedrooms:</span> {viewProperty.bedrooms}</p>
-                    <p><span className="font-medium text-gray-900">Bathrooms:</span> {viewProperty.bathrooms}</p>
-                    <p><span className="font-medium text-gray-900">Sqft:</span> {viewProperty.sqft.toLocaleString()}</p>
+                    {viewProperty.type !== 'Land' ? <p><span className="font-medium text-gray-900">Bedrooms:</span> {viewProperty.bedrooms}</p> : null}
+                    {viewProperty.type !== 'Land' ? <p><span className="font-medium text-gray-900">Bathrooms:</span> {viewProperty.bathrooms}</p> : null}
                     <p><span className="font-medium text-gray-900">Verification:</span> {viewProperty.verificationStatus}</p>
                   </div>
                   <div>

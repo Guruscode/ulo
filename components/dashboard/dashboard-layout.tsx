@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -82,12 +83,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex flex-col h-full bg-white">
       {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-        <Link href="/" className="flex items-center gap-2" onClick={() => isMobile && setMobileMenuOpen(false)}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-secondary to-secondary flex items-center justify-center">
-            <Home className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-bold text-lg text-gray-900">ULO</span>
+      <div className="h-20 flex items-center justify-between px-4 border-b border-gray-100">
+        <Link href="/" className="ml-2 flex items-center" onClick={() => isMobile && setMobileMenuOpen(false)}>
+          <Image
+            src="/ulo-logo.png"
+            alt="ULO"
+            width={212}
+            height={64}
+            className="h-14 w-auto"
+            priority
+          />
         </Link>
         {isMobile && (
           <button onClick={() => setMobileMenuOpen(false)} className="p-2">

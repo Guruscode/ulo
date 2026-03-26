@@ -111,7 +111,7 @@ export default function SellPage() {
                   <option value="apartment">Apartment</option>
                   <option value="house">House</option>
                   <option value="land">Land</option>
-                  <option value="commercial">Commercial</option>
+                  <option value="shortlet">Shortlet</option>
                 </select>
               </div>
 

@@ -15,6 +15,7 @@ function mapUserRow(row: ResultSet['rows'][number]): UserRecord {
     id: String(row.id),
     name: String(row.name),
     email: String(row.email),
+    profileImageUrl: row.profile_image_url ? String(row.profile_image_url) : null,
     role: row.role as UserRole,
     accountType: row.account_type as AccountType,
     status: Number(row.is_active) === 1 ? 'active' : 'disabled',
@@ -55,6 +56,7 @@ export async function findUserByEmail(email: string) {
         id,
         name,
         email,
+        profile_image_url,
         phone,
         address,
         state,
@@ -93,6 +95,7 @@ export async function findUserById(id: string) {
         id,
         name,
         email,
+        profile_image_url,
         phone,
         address,
         state,
@@ -216,6 +219,7 @@ export async function updateUserProfile(
   input: {
     name: string
     email: string
+    profileImageUrl?: string | null
     phone?: string | null
     address?: string | null
     state?: string | null
@@ -237,6 +241,7 @@ export async function updateUserProfile(
       SET
         name = ?,
         email = ?,
+        profile_image_url = ?,
         phone = ?,
         address = ?,
         state = ?,
@@ -253,6 +258,7 @@ export async function updateUserProfile(
     args: [
       input.name,
       input.email.toLowerCase(),
+      input.profileImageUrl ?? null,
       input.phone ?? null,
       input.address ?? null,
       input.state ?? null,
@@ -297,7 +303,7 @@ export async function listUsers(filters?: { accountType?: string; approvalStatus
     sql: `
       SELECT
         id, name, email, phone, address, state, local_government, account_type, approval_status,
-        identity_type, identity_number, role, timezone, email_notifications, push_notifications,
+        identity_type, identity_number, role, profile_image_url, timezone, email_notifications, push_notifications,
         two_factor_enabled, COALESCE(NULLIF(password_hash, ''), hashed_password, '') AS password_hash,
         COALESCE(is_active, 1) AS is_active, COALESCE(created_at, CURRENT_TIMESTAMP) AS created_at,
         COALESCE(updated_at, created_at, CURRENT_TIMESTAMP) AS updated_at, last_login_at

@@ -3,12 +3,10 @@
 import Link from 'next/link'
 import { use, useEffect, useState } from 'react'
 import {
-  Calendar,
   ChevronRight,
   Droplets,
   Heart,
   MapPin,
-  Ruler,
   Share2,
   Sofa,
   Zap,
@@ -161,12 +159,12 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="p-4"><div className="flex items-center gap-3 mb-2"><Sofa className="w-5 h-5 text-primary" /><p className="text-sm text-foreground/60">Bedrooms</p></div><p className="text-2xl font-bold text-foreground">{property.bedrooms}</p></Card>
-            <Card className="p-4"><div className="flex items-center gap-3 mb-2"><Droplets className="w-5 h-5 text-primary" /><p className="text-sm text-foreground/60">Bathrooms</p></div><p className="text-2xl font-bold text-foreground">{property.bathrooms}</p></Card>
-            <Card className="p-4"><div className="flex items-center gap-3 mb-2"><Ruler className="w-5 h-5 text-primary" /><p className="text-sm text-foreground/60">Square Feet</p></div><p className="text-2xl font-bold text-foreground">{property.sqft.toLocaleString()}</p></Card>
-            <Card className="p-4"><div className="flex items-center gap-3 mb-2"><Calendar className="w-5 h-5 text-primary" /><p className="text-sm text-foreground/60">Year Built</p></div><p className="text-2xl font-bold text-foreground">{property.yearBuilt || 'N/A'}</p></Card>
-          </div>
+          {property.type !== 'Land' ? (
+            <div className="grid grid-cols-2 gap-4 md:max-w-xl">
+              <Card className="p-4"><div className="flex items-center gap-3 mb-2"><Sofa className="w-5 h-5 text-primary" /><p className="text-sm text-foreground/60">Bedrooms</p></div><p className="text-2xl font-bold text-foreground">{property.bedrooms}</p></Card>
+              <Card className="p-4"><div className="flex items-center gap-3 mb-2"><Droplets className="w-5 h-5 text-primary" /><p className="text-sm text-foreground/60">Bathrooms</p></div><p className="text-2xl font-bold text-foreground">{property.bathrooms}</p></Card>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-5 bg-white"><p className="text-sm text-foreground/60 mb-2">Listed By</p><p className="text-xl font-bold text-foreground">{listedByLabel}</p><p className="text-sm text-foreground/70 mt-2">This listing was submitted by a {listedByLabel.toLowerCase()} on the platform.</p></Card>

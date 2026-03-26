@@ -1,76 +1,55 @@
-'use client'
-
-import { use } from 'react'
-import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
+import { notFound } from 'next/navigation'
 import { ChevronLeft, MapPin, Users, Briefcase, Calendar } from 'lucide-react'
+
+import HomeFooter from '@/components/home/home-footer'
+import HomeNav from '@/components/home/home-nav'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import HomeNav from '@/components/home/home-nav'
-import HomeFooter from '@/components/home/home-footer'
-import { neighbourhoods } from '@/lib/neighbourhoods'
-import { motion } from 'framer-motion'
+import { getNeighbourhoodBySlug } from '@/lib/server/neighbourhoods/service'
+import { ApiError } from '@/lib/server/http/api-error'
 
-interface PageProps {
-  params: Promise<{ slug: string }>
-}
+export default async function NeighbourhoodDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
 
-export default function NeighbourhoodDetailPage({ params }: PageProps) {
-  const { slug } = use(params)
-  const neighbourhood = neighbourhoods.find((n) => n.slug === slug)
+  try {
+    const neighbourhood = await getNeighbourhoodBySlug(slug)
 
-  if (!neighbourhood) {
-    notFound()
-  }
+    return (
+      <div className="min-h-screen bg-background">
+        <HomeNav />
+        <section className="relative h-96 md:h-[500px] w-full overflow-hidden">
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${neighbourhood.image})` }}>
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
+          </div>
 
-  return (
-    <div className="min-h-screen bg-background">
-      <HomeNav />
+          <div className="absolute top-6 left-6 z-10">
+            <Link href="/">
+              <Button variant="secondary" size="icon" className="bg-white/90 hover:bg-white">
+                <ChevronLeft className="w-5 h-5 text-secondary" />
+              </Button>
+            </Link>
+          </div>
 
-      {/* Hero Section */}
-      <section className="relative h-96 md:h-[500px] w-full overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `url(${neighbourhood.image})`,
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
-        </div>
-
-        {/* Back Button */}
-        <div className="absolute top-6 left-6 z-10">
-          <Link href="/">
-            <Button variant="secondary" size="icon" className="bg-white/90 hover:bg-white">
-              <ChevronLeft className="w-5 h-5 text-secondary" />
-            </Button>
-          </Link>
-        </div>
-
-        {/* Hero Content */}
-        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 text-white">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <h1 className="text-5xl md:text-6xl font-serif font-bold">{neighbourhood.name}</h1>
-            <p className="text-lg md:text-xl text-gray-200 max-w-2xl">{neighbourhood.description}</p>
-            <div className="flex flex-col md:flex-row gap-4 text-sm md:text-base">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                <span>{neighbourhood.coordinates.lat}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                <span>{neighbourhood.coordinates.lng}</span>
+          <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 text-white">
+            <div className="space-y-4">
+              <h1 className="text-5xl md:text-6xl font-serif font-bold">{neighbourhood.name}</h1>
+              <p className="text-lg md:text-xl text-gray-200 max-w-2xl">{neighbourhood.description}</p>
+              <div className="flex flex-col md:flex-row gap-4 text-sm md:text-base">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  <span>{neighbourhood.latitude}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  <span>{neighbourhood.longitude}</span>
+                </div>
               </div>
             </div>
-          </motion.div>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* Main Content */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} className="space-y-12">
-          {/* About Section */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20 space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2 space-y-6">
               <div>
@@ -78,7 +57,6 @@ export default function NeighbourhoodDetailPage({ params }: PageProps) {
                 <p className="text-lg text-muted-foreground leading-relaxed">{neighbourhood.fullDescription}</p>
               </div>
 
-              {/* Highlights */}
               <div>
                 <h3 className="text-2xl font-serif font-bold text-secondary mb-4">Key Highlights</h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -92,7 +70,6 @@ export default function NeighbourhoodDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Demographics Card */}
             <div className="bg-secondary/5 rounded-lg p-6 border border-secondary/10 h-fit sticky top-24">
               <h3 className="text-xl font-serif font-bold text-secondary mb-6">Demographics</h3>
               <div className="space-y-4">
@@ -100,28 +77,27 @@ export default function NeighbourhoodDetailPage({ params }: PageProps) {
                   <Users className="w-5 h-5 text-secondary mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-sm text-muted-foreground">Population</p>
-                    <p className="font-semibold text-foreground">{neighbourhood.demographics.population}</p>
+                    <p className="font-semibold text-foreground">{neighbourhood.population}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Briefcase className="w-5 h-5 text-secondary mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-sm text-muted-foreground">Average Income</p>
-                    <p className="font-semibold text-foreground">{neighbourhood.demographics.avgIncome}</p>
+                    <p className="font-semibold text-foreground">{neighbourhood.avgIncome}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Calendar className="w-5 h-5 text-secondary mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-sm text-muted-foreground">Average Age</p>
-                    <p className="font-semibold text-foreground">{neighbourhood.demographics.avgAge}</p>
+                    <p className="font-semibold text-foreground">{neighbourhood.avgAge}</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Amenities */}
           <div>
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-secondary mb-6">Amenities</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -133,22 +109,14 @@ export default function NeighbourhoodDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Development Phases */}
-          {neighbourhood.phases && neighbourhood.phases.length > 0 && (
+          {neighbourhood.phases.length > 0 ? (
             <div>
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-secondary mb-6">Development Phases</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {neighbourhood.phases.map((phase, idx) => (
                   <Card key={idx} className="overflow-hidden hover:shadow-lg transition-shadow">
-                    <div className="relative h-48 bg-gradient-to-br from-secondary/20 to-secondary/5">
-                      <div
-                        className="absolute inset-0 bg-cover bg-center"
-                        style={{
-                          backgroundImage: `url(${phase.image})`,
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/30" />
-                      </div>
+                    <div className="relative h-48 bg-cover bg-center" style={{ backgroundImage: `url(${phase.image})` }}>
+                      <div className="absolute inset-0 bg-black/30" />
                     </div>
                     <div className="p-6">
                       <h3 className="text-xl font-bold text-secondary mb-2">{phase.name}</h3>
@@ -158,9 +126,8 @@ export default function NeighbourhoodDetailPage({ params }: PageProps) {
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
-          {/* CTA */}
           <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-8 text-center">
             <h3 className="text-2xl md:text-3xl font-serif font-bold text-secondary mb-4">
               Ready to Explore {neighbourhood.name}?
@@ -170,21 +137,21 @@ export default function NeighbourhoodDetailPage({ params }: PageProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href={`/listings?location=${neighbourhood.name}`}>
-                <Button size="lg" className="bg-secondary hover:bg-secondary/90 text-white">
-                  View Properties
-                </Button>
+                <Button size="lg" className="bg-secondary hover:bg-secondary/90 text-white">View Properties</Button>
               </Link>
               <Link href="/">
-                <Button size="lg" variant="outline">
-                  Back to Home
-                </Button>
+                <Button size="lg" variant="outline">Back to Home</Button>
               </Link>
             </div>
           </div>
-        </motion.div>
-      </section>
-
-      <HomeFooter />
-    </div>
-  )
+        </section>
+        <HomeFooter />
+      </div>
+    )
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      notFound()
+    }
+    throw error
+  }
 }

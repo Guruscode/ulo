@@ -10,6 +10,7 @@ export function accountRequest() {
 export function updateAccountRequest(input: {
   name: string
   email: string
+  profileImageUrl?: string | null
   phone?: string | null
   address?: string | null
   state?: string | null

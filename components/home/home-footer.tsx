@@ -1,9 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Landmark } from 'lucide-react'
+import Image from 'next/image'
 
 export default function HomeFooter() {
+  const handleOpenCookies = () => {
+    window.dispatchEvent(new Event('open-cookie-banner'))
+  }
+
   return (
     <footer className="bg-secondary text-white py-16 mt-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,7 +17,7 @@ export default function HomeFooter() {
             <ul className="space-y-2 text-sm text-white/70">
               <li><Link href="/listings" className="hover:text-white transition">For Sale</Link></li>
               <li><Link href="/listings" className="hover:text-white transition">For Rent</Link></li>
-              <li><Link href="/listings" className="hover:text-white transition">Commercial</Link></li>
+              <li><Link href="/shortlet" className="hover:text-white transition">Shortlet</Link></li>
               <li><Link href="/listings" className="hover:text-white transition">Land</Link></li>
             </ul>
           </div>
@@ -38,17 +42,20 @@ export default function HomeFooter() {
             <ul className="space-y-2 text-sm text-white/70">
               <li><Link href="/privacy" className="hover:text-white transition">Privacy</Link></li>
               <li><Link href="/terms" className="hover:text-white transition">Terms</Link></li>
-              <li><Link href="/cookies" className="hover:text-white transition">Cookies</Link></li>
+              <li><button type="button" onClick={handleOpenCookies} className="hover:text-white transition text-left">Cookies</button></li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/60">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-accent rounded flex items-center justify-center">
-              <Landmark className="w-5 h-5 text-secondary" />
-            </div>
-            <span className="font-serif font-bold">ULO</span>
+          <div className="ml-2 sm:ml-4 flex items-center gap-3">
+            <Image
+              src="/logo-transperient.png"
+              alt="ULO"
+              width={212}
+              height={64}
+              className="h-14 w-auto"
+            />
           </div>
           <p>© {new Date().getFullYear()} ULO. All rights reserved.</p>
         </div>

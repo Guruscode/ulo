@@ -13,14 +13,12 @@ import { usePublicHomeProperties } from '@/components/properties/use-public-home
 type PublicPropertyGridMode =
   | 'for-sale'
   | 'for-rent'
-  | 'commercial'
   | 'shortlet'
   | 'apartments'
 
 function filterByMode(mode: PublicPropertyGridMode, title: string, type: string) {
   if (mode === 'for-sale') return type === 'For Sale'
   if (mode === 'for-rent') return type === 'For Rent'
-  if (mode === 'commercial') return type === 'Commercial'
   if (mode === 'shortlet') return type === 'Shortlet'
   return title.toLowerCase().includes('apartment') || title.toLowerCase().includes('flat')
 }

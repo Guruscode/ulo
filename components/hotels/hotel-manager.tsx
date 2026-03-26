@@ -467,7 +467,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>{editingHotel ? 'Edit Hotel' : 'Create Hotel'}</DialogTitle>
-            <DialogDescription>Complete hotel information, gallery, contact details, and room inventory.</DialogDescription>
+            <DialogDescription>Complete hotel information, upload gallery images up to 4 MB each, and manage room inventory.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -524,11 +524,18 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
               <div key={index} className="space-y-2">
                 <Label>Upload Image {index + 1}</Label>
                 <div className="flex gap-2">
-                  <FileUpload onUpload={(url) => {
-                    const next = [...form.images] as HotelForm['images']
-                    next[index] = url
-                    setForm({ ...form, images: next })
-                  }} />
+                  <FileUpload
+                    id={`hotel-image-${index}`}
+                    label={`Upload Image ${index + 1} (Max 4 MB)`}
+                    uploadingLabel="Uploading image..."
+                    accept="image/*"
+                    maxSizeMb={4}
+                    onUpload={(url) => {
+                      const next = [...form.images] as HotelForm['images']
+                      next[index] = url
+                      setForm({ ...form, images: next })
+                    }}
+                  />
                   {image && <img src={image} alt="" className="h-20 w-20 rounded object-cover" />}
                 </div>
               </div>
@@ -570,7 +577,26 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                     <div className="space-y-2"><Label>Bed Type</Label><Input value={room.bedType} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, bedType: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
                     <div className="space-y-2"><Label>Room Size</Label><Input value={room.size} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, size: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
                     <div className="space-y-2"><Label>Room Amenities</Label><Input value={room.amenities} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, amenities: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
-                    <div className="space-y-2"><Label>Room Image URL</Label><Input value={room.images[0]} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, images: [event.target.value] }; setForm({ ...form, rooms: next }) }} /></div>
+                    <div className="space-y-2">
+                      <Label>Room Image</Label>
+                      <div className="flex gap-2">
+                        <FileUpload
+                          id={`room-image-${index}`}
+                          label="Upload Room Image (Max 4 MB)"
+                          uploadingLabel="Uploading image..."
+                          accept="image/*"
+                          maxSizeMb={4}
+                          onUpload={(url) => {
+                            const next = [...form.rooms]
+                            next[index] = { ...room, images: [url] }
+                            setForm({ ...form, rooms: next })
+                          }}
+                        />
+                        {room.images[0] ? (
+                          <img src={room.images[0]} alt="" className="h-20 w-20 rounded object-cover" />
+                        ) : null}
+                      </div>
+                    </div>
                     <div className="flex items-center justify-between rounded-lg border px-4 py-3 md:col-span-2">
                       <div>
                         <p className="font-medium text-gray-900">Room Available</p>

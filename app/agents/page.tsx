@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MapPin, Search, UserPlus } from 'lucide-react'
 
 import HomeFooter from '@/components/home/home-footer'
@@ -12,6 +13,8 @@ import { Input } from '@/components/ui/input'
 import { ApiClientError } from '@/lib/client/api-error'
 import { listAgentsRequest } from '@/lib/client/users-client'
 import type { AuthUser } from '@/lib/auth/types'
+
+const DEFAULT_AGENT_IMAGE = '/logo-transperient.png'
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AuthUser[]>([])
@@ -67,8 +70,14 @@ export default function AgentsPage() {
           {filteredAgents.map((agent) => (
             <Link key={agent.id} href={`/agents/${agent.id}`}>
               <Card className="h-full p-5 transition-shadow hover:shadow-lg">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/10 text-xl font-bold text-secondary">
-                  {agent.name.charAt(0)}
+                <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-secondary/10 ring-2 ring-secondary/10">
+                  <Image
+                    src={agent.profileImageUrl || DEFAULT_AGENT_IMAGE}
+                    alt={agent.name}
+                    fill
+                    className={agent.profileImageUrl ? 'object-cover' : 'object-contain p-2'}
+                    sizes="64px"
+                  />
                 </div>
                 <div className="mt-4">
                   <h3 className="font-semibold text-secondary">{agent.name}</h3>
