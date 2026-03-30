@@ -2,14 +2,39 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Heart, MapPin, Search, X } from 'lucide-react'
+import { Bath, BedDouble, ChevronDown, Heart, MapPin, Search, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { usePublicHomeProperties } from '@/components/properties/use-public-home-properties'
+import { cn } from '@/lib/utils'
+
+const BEDROOM_OPTIONS = ['any', '1+', '2+', '3+', '4+', '5+'] as const
+const BATHROOM_OPTIONS = ['any', '1+', '1.5+', '2+', '3+', '4+'] as const
+type RangeOption = (typeof BEDROOM_OPTIONS)[number] | (typeof BATHROOM_OPTIONS)[number]
+
+function parseMinimumValue(value: RangeOption) {
+  if (value === 'any') {
+    return null
+  }
+
+  return Number(value.replace('+', ''))
+}
+
+function matchesCountFilter(value: number, filter: RangeOption, exactMatch: boolean) {
+  const minimumValue = parseMinimumValue(filter)
+
+  if (minimumValue === null) {
+    return true
+  }
+
+  return exactMatch ? value === minimumValue : value >= minimumValue
+}
 
 export default function ListingsContent() {
   const searchParams = useSearchParams()
@@ -19,6 +44,13 @@ export default function ListingsContent() {
   const [priceMin, setPriceMin] = useState<number | ''>('')
   const [priceMax, setPriceMax] = useState<number | ''>('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [isBedsBathsOpen, setIsBedsBathsOpen] = useState(false)
+  const [selectedBedrooms, setSelectedBedrooms] = useState<RangeOption>('any')
+  const [selectedBathrooms, setSelectedBathrooms] = useState<RangeOption>('any')
+  const [draftBedrooms, setDraftBedrooms] = useState<RangeOption>('any')
+  const [draftBathrooms, setDraftBathrooms] = useState<RangeOption>('any')
+  const [useExactMatch, setUseExactMatch] = useState(false)
+  const [draftUseExactMatch, setDraftUseExactMatch] = useState(false)
 
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
@@ -31,19 +63,51 @@ export default function ListingsContent() {
       const matchesPriceMin = priceMin === '' || property.priceValue >= priceMin
       const matchesPriceMax = priceMax === '' || property.priceValue <= priceMax
       const matchesType = selectedType === 'all' || property.type === selectedType
+      const matchesBedrooms = matchesCountFilter(property.bedrooms, selectedBedrooms, useExactMatch)
+      const matchesBathrooms = matchesCountFilter(property.bathrooms, selectedBathrooms, useExactMatch)
 
-      return matchesSearch && matchesPriceMin && matchesPriceMax && matchesType
+      return matchesSearch && matchesPriceMin && matchesPriceMax && matchesType && matchesBedrooms && matchesBathrooms
     })
-  }, [priceMax, priceMin, properties, searchTerm, selectedType])
+  }, [priceMax, priceMin, properties, searchTerm, selectedBathrooms, selectedBedrooms, selectedType, useExactMatch])
 
   const displayedTypes = ['all', ...Array.from(new Set(properties.map((property) => property.type)))]
-  const hasActiveFilters = searchTerm || selectedType !== 'all' || priceMin !== '' || priceMax !== ''
+  const activeBedsBathsCount = Number(selectedBedrooms !== 'any') + Number(selectedBathrooms !== 'any')
+  const hasActiveFilters =
+    searchTerm ||
+    selectedType !== 'all' ||
+    priceMin !== '' ||
+    priceMax !== '' ||
+    selectedBedrooms !== 'any' ||
+    selectedBathrooms !== 'any'
+
+  const openBedsBathsFilter = (open: boolean) => {
+    setIsBedsBathsOpen(open)
+
+    if (open) {
+      setDraftBedrooms(selectedBedrooms)
+      setDraftBathrooms(selectedBathrooms)
+      setDraftUseExactMatch(useExactMatch)
+    }
+  }
+
+  const applyBedsBathsFilter = () => {
+    setSelectedBedrooms(draftBedrooms)
+    setSelectedBathrooms(draftBathrooms)
+    setUseExactMatch(draftUseExactMatch)
+    setIsBedsBathsOpen(false)
+  }
 
   const clearFilters = () => {
     setSearchTerm('')
     setSelectedType('all')
     setPriceMin('')
     setPriceMax('')
+    setSelectedBedrooms('any')
+    setSelectedBathrooms('any')
+    setDraftBedrooms('any')
+    setDraftBathrooms('any')
+    setUseExactMatch(false)
+    setDraftUseExactMatch(false)
   }
 
   return (
@@ -83,6 +147,104 @@ export default function ListingsContent() {
               Filters
             </Button>
             <div className={`flex flex-col lg:flex-row gap-4 ${isFilterOpen || 'hidden lg:flex'}`}>
+              <Popover open={isBedsBathsOpen} onOpenChange={openBedsBathsFilter}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-11 justify-between gap-3 px-4 text-sm font-medium">
+                    <span className="flex items-center gap-2">
+                      <BedDouble className="h-4 w-4 text-slate-500" />
+                      Beds & Baths
+                      {activeBedsBathsCount > 0 ? (
+                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white">
+                          {activeBedsBathsCount}
+                        </span>
+                      ) : null}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[340px] space-y-6 rounded-2xl border border-slate-200 p-0 shadow-xl">
+                  <div className="border-b border-slate-100 px-5 py-4">
+                    <p className="text-lg font-semibold text-slate-900">Number of Bedrooms</p>
+                  </div>
+
+                  <div className="space-y-5 px-5">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <BedDouble className="h-4 w-4 text-slate-500" />
+                        Bedrooms
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {BEDROOM_OPTIONS.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => setDraftBedrooms(option)}
+                            className={cn(
+                              'rounded-xl border px-3 py-3 text-sm font-medium transition-colors',
+                              draftBedrooms === option
+                                ? 'border-slate-900 bg-slate-900 text-white'
+                                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
+                            )}
+                          >
+                            {option === 'any' ? 'Any' : option}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-700">
+                      <Checkbox checked={draftUseExactMatch} onCheckedChange={(checked) => setDraftUseExactMatch(checked === true)} />
+                      <span>Use exact match</span>
+                    </label>
+                  </div>
+
+                  <div className="border-t border-slate-100 px-5 pt-5">
+                    <p className="text-lg font-semibold text-slate-900">Number of Bathrooms</p>
+                  </div>
+
+                  <div className="space-y-3 px-5 pb-5">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                      <Bath className="h-4 w-4 text-slate-500" />
+                      Bathrooms
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {BATHROOM_OPTIONS.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setDraftBathrooms(option)}
+                          className={cn(
+                            'rounded-xl border px-3 py-3 text-sm font-medium transition-colors',
+                            draftBathrooms === option
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
+                          )}
+                        >
+                          {option === 'any' ? 'Any' : option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setDraftBedrooms('any')
+                        setDraftBathrooms('any')
+                        setDraftUseExactMatch(false)
+                      }}
+                      className="text-slate-600 hover:text-slate-900"
+                    >
+                      Clear
+                    </Button>
+                    <Button type="button" onClick={applyBedsBathsFilter} className="min-w-32 bg-sky-600 text-white hover:bg-sky-700">
+                      Apply
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <div className="flex flex-wrap gap-2">
                 {displayedTypes.map((type) => (
                   <button
@@ -118,7 +280,7 @@ export default function ListingsContent() {
         ) : filteredProperties.length === 0 ? (
           <div className="text-center py-20">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">No properties found</h2>
-            <p className="text-gray-600 mb-6">Try adjusting your search term, price range or property type.</p>
+            <p className="text-gray-600 mb-6">Try adjusting your search term, price range, beds and baths, or property type.</p>
             <Button onClick={clearFilters}>Clear Filters</Button>
           </div>
         ) : (

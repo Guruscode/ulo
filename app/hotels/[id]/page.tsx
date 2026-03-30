@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import HomeFooter from '@/components/home/home-footer'
 import HomeNav from '@/components/home/home-nav'
+import { FeaturedImageGallery } from '@/components/media/featured-image-gallery'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -41,7 +42,6 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params)
   const [hotel, setHotel] = useState<HotelRecord | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [bookingOpen, setBookingOpen] = useState(false)
   const [booking, setBooking] = useState<HotelBookingInput>(EMPTY_BOOKING)
   const [bookingSubmitting, setBookingSubmitting] = useState(false)
@@ -102,14 +102,11 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2 h-80 md:h-[450px] rounded-2xl bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${hotel.images[activeImageIndex]})` }} />
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-            {hotel.images.slice(1, 5).map((image, index) => (
-              <div key={index} className={`h-40 rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${activeImageIndex === index + 1 ? 'border-secondary shadow-lg' : 'border-transparent hover:border-secondary/50'}`} style={{ backgroundImage: `url(${image})`, backgroundSize: 'cover' }} onClick={() => setActiveImageIndex(index + 1)} />
-            ))}
-          </div>
-        </div>
+        <FeaturedImageGallery
+          images={hotel.images}
+          title={hotel.name}
+          badgeLabel="Active"
+        />
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

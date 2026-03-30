@@ -272,6 +272,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
     mode === 'dashboard'
       ? ['Property Type', 'Property Details', 'Media & Contact', 'Review', 'Subscription']
       : ['Property Type', 'Property Details', 'Media & Contact', 'Review']
+  const canEditCoordinates = mode === 'admin' && Boolean(editingProperty)
 
   const loadProperties = async () => {
     setLoading(true)
@@ -771,14 +772,18 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                 <Label htmlFor="estate">Estate / Area (optional)</Label>
                 <Input id="estate" value={form.estate} onChange={(event) => setForm({ ...form, estate: event.target.value })} placeholder="e.g., Victoria Garden City, Lekki Phase 1" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude <span className="text-xs text-gray-500">(get from https://www.gps-coordinates.net/)</span></Label>
-                <Input id="latitude" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude <span className="text-xs text-gray-500">(get from https://www.gps-coordinates.net/)</span></Label>
-                <Input id="longitude" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} />
-              </div>
+              {canEditCoordinates ? (
+                <div className="space-y-2">
+                  <Label htmlFor="latitude">Latitude <span className="text-xs text-gray-500">(admin edit only)</span></Label>
+                  <Input id="latitude" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} />
+                </div>
+              ) : null}
+              {canEditCoordinates ? (
+                <div className="space-y-2">
+                  <Label htmlFor="longitude">Longitude <span className="text-xs text-gray-500">(admin edit only)</span></Label>
+                  <Input id="longitude" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} />
+                </div>
+              ) : null}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="features">Features</Label>
                 <Textarea id="features" rows={4} value={form.features} onChange={(event) => setForm({ ...form, features: event.target.value })} placeholder="Pool, Gym, Security, Parking" />

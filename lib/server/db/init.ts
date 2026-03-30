@@ -582,6 +582,39 @@ async function ensureNeighbourhoodSchema() {
   await db.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_neighbourhoods_slug ON neighbourhoods(slug);`)
 }
 
+async function ensureNotificationSchema() {
+  const db = getDbClient()
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS user_notifications (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      href TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  const definitions = [
+    { name: 'id', sql: `ALTER TABLE user_notifications ADD COLUMN id TEXT` },
+    { name: 'user_id', sql: `ALTER TABLE user_notifications ADD COLUMN user_id TEXT NOT NULL DEFAULT ''` },
+    { name: 'title', sql: `ALTER TABLE user_notifications ADD COLUMN title TEXT NOT NULL DEFAULT ''` },
+    { name: 'message', sql: `ALTER TABLE user_notifications ADD COLUMN message TEXT NOT NULL DEFAULT ''` },
+    { name: 'href', sql: `ALTER TABLE user_notifications ADD COLUMN href TEXT` },
+    { name: 'created_at', sql: `ALTER TABLE user_notifications ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  ] as const
+
+  const info = await db.execute(`PRAGMA table_info(user_notifications)`)
+  const existingColumns = new Set(info.rows.map((row) => String(row.name)))
+  for (const column of definitions) {
+    if (!existingColumns.has(column.name)) {
+      await db.execute(column.sql)
+    }
+  }
+
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_user_notifications_user_id ON user_notifications(user_id);`)
+}
+
 export async function initializeDatabase() {
   if (initialized) {
     return
@@ -809,6 +842,7 @@ export async function initializeDatabase() {
     await ensureSavedPropertiesSchema()
     await ensureSubscriptionSchema()
     await ensureNeighbourhoodSchema()
+    await ensureNotificationSchema()
 
     initialized = true
     await seedBlogsIfNeeded()

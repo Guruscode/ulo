@@ -14,6 +14,7 @@ import {
 import { motion } from 'framer-motion'
 
 import HomeNav from '@/components/home/home-nav'
+import { FeaturedImageGallery } from '@/components/media/featured-image-gallery'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -39,7 +40,6 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const { id } = use(params)
   const [property, setProperty] = useState<PropertyRecord | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeImageIndex, setActiveImageIndex] = useState(0)
   const { isAuthenticated } = useAuth()
 
   useEffect(() => {
@@ -103,19 +103,11 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-3 h-96 md:h-[500px] rounded-2xl bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${images[activeImageIndex]})` }} />
-            <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
-              {images.map((image, index) => (
-                <button
-                  key={image}
-                  className={`h-24 rounded-lg overflow-hidden border-2 transition-all ${activeImageIndex === index ? 'border-primary shadow-lg' : 'border-transparent hover:border-primary/50'}`}
-                  style={{ backgroundImage: `url(${image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-                  onClick={() => setActiveImageIndex(index)}
-                />
-              ))}
-            </div>
-          </div>
+          <FeaturedImageGallery
+            images={images}
+            title={property.title}
+            badgeLabel={property.status === 'active' ? 'Active' : property.status.replace('_', ' ')}
+          />
 
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>

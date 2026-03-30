@@ -11,6 +11,7 @@ import type {
 } from '@/lib/hotels/types'
 import { ApiError } from '@/lib/server/http/api-error'
 import { sendHotelApprovalEmail, sendHotelBookingEmails, sendHotelCreatedEmails } from '@/lib/server/mail/notifications'
+import { createUserNotification } from '@/lib/server/notifications/service'
 import { assertListingCapacity } from '@/lib/server/subscriptions/service'
 import {
   countHotels,
@@ -191,6 +192,15 @@ export async function createHotelForActor(input: unknown, actor: AuthUser) {
 
   if (!hotel) throw new ApiError(500, 'HOTEL_CREATE_FAILED', 'Unable to create hotel.')
   await sendHotelCreatedEmails(hotel)
+  await createUserNotification({
+    userId: actor.id,
+    title: 'Hotel submitted',
+    message:
+      approvalStatus === 'approved'
+        ? `"${hotel.name}" is now live on ULO.`
+        : `"${hotel.name}" was submitted and is pending admin review.`,
+    href: '/dashboard/hotels',
+  })
   return hotel
 }
 
@@ -254,6 +264,15 @@ export async function setHotelApprovalForAdmin(id: string, input: unknown, actor
   if (!hotel) throw new ApiError(500, 'HOTEL_APPROVAL_FAILED', 'Unable to update hotel approval.')
   if (parsed.data.approvalStatus === 'approved' || parsed.data.approvalStatus === 'rejected') {
     await sendHotelApprovalEmail(hotel)
+    await createUserNotification({
+      userId: hotel.createdByUserId,
+      title: parsed.data.approvalStatus === 'approved' ? 'Hotel approved' : 'Hotel rejected',
+      message:
+        parsed.data.approvalStatus === 'approved'
+          ? `"${hotel.name}" has been approved and is now visible on the platform.`
+          : `"${hotel.name}" was rejected.${hotel.rejectionReason ? ` Reason: ${hotel.rejectionReason}` : ''}`,
+      href: '/dashboard/hotels',
+    })
   }
   return hotel
 }

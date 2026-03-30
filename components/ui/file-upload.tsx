@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react';
+import { FileImage, UploadCloud, Video } from 'lucide-react';
 import { getSignedUploadUrl } from '@/lib/upload';
 
 interface FileUploadProps {
@@ -23,6 +24,9 @@ export function FileUpload({
   maxSizeMb = 4,
 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const isVideoUpload = accept.includes('video')
+  const uploadTypeLabel = isVideoUpload ? 'video' : 'image'
+  const Icon = isVideoUpload ? Video : FileImage
 
   const handleUpload = useCallback(async (file: File) => {
     const isImageUpload = accept.includes('image')
@@ -81,8 +85,21 @@ export function FileUpload({
         className="sr-only"
         id={id}
       />
-      <label htmlFor={id} className="flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-        {uploading ? uploadingLabel : label}
+      <label
+        htmlFor={id}
+        className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center transition hover:border-secondary hover:bg-secondary/5"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
+          {uploading ? <UploadCloud className="h-5 w-5 animate-pulse text-secondary" /> : <Icon className="h-5 w-5 text-secondary" />}
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-slate-900">
+            {uploading ? uploadingLabel : label}
+          </p>
+          <p className="text-xs text-slate-500">
+            Click to upload a {uploadTypeLabel}. Maximum file size: {maxSizeMb} MB.
+          </p>
+        </div>
       </label>
     </div>
   );

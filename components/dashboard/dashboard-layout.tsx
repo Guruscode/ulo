@@ -42,6 +42,7 @@ const navItems = [
   { id: 'overview', label: 'Dashboard', icon: BarChart3, href: '/dashboard' },
   { id: 'properties', label: 'Properties', icon: Home, href: '/dashboard/properties' },
   { id: 'hotels', label: 'Hotels', icon: Building2, href: '/dashboard/hotels' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, href: '/dashboard/notifications' },
   { id: 'favorites', label: 'Saved', icon: Heart, href: '/dashboard/favorites' },
   { id: 'subscriptions', label: 'Subscription', icon: CreditCard, href: '/dashboard/subscriptions' },
 ]
@@ -243,10 +244,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
             <div className="flex items-center gap-1 sm:gap-3">
               {/* Notifications */}
-              <Button variant="ghost" size="icon" className="relative h-9 w-9">
+              <Link href="/dashboard/notifications">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
                 <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-              </Button>
+                </Button>
+              </Link>
 
               <AuthenticatedUserMenu
                 dashboardHref="/dashboard"

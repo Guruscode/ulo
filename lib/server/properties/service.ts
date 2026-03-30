@@ -11,6 +11,7 @@ import type {
 } from '@/lib/properties/types'
 import { ApiError } from '@/lib/server/http/api-error'
 import { sendPropertyApprovalEmail, sendPropertyCreatedEmails } from '@/lib/server/mail/notifications'
+import { createUserNotification } from '@/lib/server/notifications/service'
 import { assertListingCapacity } from '@/lib/server/subscriptions/service'
 import {
   countProperties,
@@ -313,6 +314,15 @@ export async function createPropertyForActor(input: unknown, actor: AuthUser) {
   }
 
   await sendPropertyCreatedEmails(property)
+  await createUserNotification({
+    userId: actor.id,
+    title: 'Property submitted',
+    message:
+      approvalStatus === 'approved'
+        ? `"${property.title}" is now live on ULO.`
+        : `"${property.title}" was submitted and is pending admin review.`,
+    href: '/dashboard/properties',
+  })
   return property
 }
 
@@ -437,6 +447,15 @@ export async function setPropertyApprovalForAdmin(
 
   if (approvalStatus === 'approved' || approvalStatus === 'rejected') {
     await sendPropertyApprovalEmail(property)
+    await createUserNotification({
+      userId: property.createdByUserId,
+      title: approvalStatus === 'approved' ? 'Property approved' : 'Property rejected',
+      message:
+        approvalStatus === 'approved'
+          ? `"${property.title}" has been approved and is now visible on the platform.`
+          : `"${property.title}" was rejected.${property.rejectionReason ? ` Reason: ${property.rejectionReason}` : ''}`,
+      href: '/dashboard/properties',
+    })
   }
   return property
 }
