@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { StackedCardListSkeleton } from '@/components/ui/page-skeletons'
 import {
   Select,
   SelectContent,
@@ -68,6 +69,9 @@ type HotelForm = {
   contactPhone: string
   contactEmail: string
   contactAddress: string
+  bankName: string
+  bankAccountName: string
+  bankAccountNumber: string
   featured: boolean
   status: 'active' | 'inactive' | 'pending'
   rooms: RoomForm[]
@@ -97,6 +101,9 @@ const EMPTY_FORM: HotelForm = {
   contactPhone: '',
   contactEmail: '',
   contactAddress: '',
+  bankName: '',
+  bankAccountName: '',
+  bankAccountNumber: '',
   featured: false,
   status: 'active',
   rooms: [{ ...EMPTY_ROOM }],
@@ -124,6 +131,9 @@ function toFormState(hotel: HotelRecord): HotelForm {
     contactPhone: hotel.contactPhone,
     contactEmail: hotel.contactEmail,
     contactAddress: hotel.contactAddress,
+    bankName: hotel.bankName,
+    bankAccountName: hotel.bankAccountName,
+    bankAccountNumber: hotel.bankAccountNumber,
     featured: hotel.featured,
     status: hotel.status,
     rooms: hotel.rooms.map((room) => ({
@@ -154,6 +164,9 @@ function toPayload(form: HotelForm): HotelUpsertInput {
     contactPhone: form.contactPhone.trim(),
     contactEmail: form.contactEmail.trim(),
     contactAddress: form.contactAddress.trim(),
+    bankName: form.bankName.trim(),
+    bankAccountName: form.bankAccountName.trim(),
+    bankAccountNumber: form.bankAccountNumber.trim(),
     featured: form.featured,
     status: form.status,
     rooms: form.rooms.map((room) => ({
@@ -249,7 +262,11 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
     [hotels]
   )
 
-  const canSave = form.images.every(Boolean) && form.rooms.length > 0 && form.rooms.every((room) => room.name && room.priceValue && room.images[0])
+  const canSave =
+    form.images.every(Boolean) &&
+    Boolean(form.bankName && form.bankAccountName && form.bankAccountNumber) &&
+    form.rooms.length > 0 &&
+    form.rooms.every((room) => room.name && room.priceValue && room.images[0])
 
   const saveHotel = async () => {
     setSaving(true)
@@ -373,10 +390,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
       <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-4">
           {loading ? (
-            <Card className="flex items-center justify-center p-12 text-gray-500">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Loading hotels...
-            </Card>
+            <ManagerListSkeleton />
           ) : hotels.length === 0 ? (
             <Card className="p-12 text-center">
               <h2 className="text-xl font-semibold text-gray-900">No hotels yet</h2>
@@ -403,6 +417,9 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                         <p>Phone: {hotel.contactPhone}</p>
                         <p>Email: {hotel.contactEmail}</p>
                         <p>{hotel.featured ? 'Featured' : 'Standard'}</p>
+                        <p>Bank: {hotel.bankName}</p>
+                        <p>Acct Name: {hotel.bankAccountName}</p>
+                        <p>Acct No: {hotel.bankAccountNumber}</p>
                       </div>
                       <p className="line-clamp-2 text-sm text-gray-600">{hotel.description}</p>
                     </div>
@@ -443,8 +460,19 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                   <p className="text-sm text-gray-500">{booking.hotelName} · {booking.roomName}</p>
                   <p className="text-sm text-gray-500">{booking.guestEmail}</p>
                   <p className="mt-1 text-sm text-gray-500">{booking.checkInDate} to {booking.checkOutDate}</p>
+                  <p className="mt-1 text-sm text-gray-500">Payment: {booking.paymentStatus.replace('_', ' ')}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Badge variant="outline">{booking.status}</Badge>
+                    {booking.paymentReceiptUrl ? (
+                      <a
+                        href={booking.paymentReceiptUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm font-medium text-secondary underline underline-offset-4"
+                      >
+                        View receipt
+                      </a>
+                    ) : null}
                     <Select value={booking.status} onValueChange={(value) => void updateBookingStatus(booking.id, value as HotelBookingRecord['status'])} disabled={actingBookingId === booking.id}>
                       <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -506,6 +534,9 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
             <div className="space-y-2"><Label>Phone</Label><Input value={form.contactPhone} onChange={(event) => setForm({ ...form, contactPhone: event.target.value })} /></div>
             <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.contactEmail} onChange={(event) => setForm({ ...form, contactEmail: event.target.value })} /></div>
             <div className="space-y-2 md:col-span-2"><Label>Address</Label><Input value={form.contactAddress} onChange={(event) => setForm({ ...form, contactAddress: event.target.value })} /></div>
+            <div className="space-y-2"><Label>Bank Name</Label><Input value={form.bankName} onChange={(event) => setForm({ ...form, bankName: event.target.value })} /></div>
+            <div className="space-y-2"><Label>Account Name</Label><Input value={form.bankAccountName} onChange={(event) => setForm({ ...form, bankAccountName: event.target.value })} /></div>
+            <div className="space-y-2 md:col-span-2"><Label>Account Number</Label><Input value={form.bankAccountNumber} onChange={(event) => setForm({ ...form, bankAccountNumber: event.target.value })} /></div>
             {mode === 'admin' ? (
               <div className="space-y-2 md:col-span-2">
                 <div className="flex items-center justify-between rounded-lg border px-4 py-3">
@@ -643,6 +674,9 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                   <p><span className="font-medium text-gray-900">Status:</span> {viewHotel.status}</p>
                   <p><span className="font-medium text-gray-900">Amenities:</span> {viewHotel.amenities.join(', ')}</p>
                   <p><span className="font-medium text-gray-900">Contact:</span> {viewHotel.contactPhone} · {viewHotel.contactEmail}</p>
+                  <p><span className="font-medium text-gray-900">Bank:</span> {viewHotel.bankName}</p>
+                  <p><span className="font-medium text-gray-900">Account Name:</span> {viewHotel.bankAccountName}</p>
+                  <p><span className="font-medium text-gray-900">Account Number:</span> {viewHotel.bankAccountNumber}</p>
                   <div>
                     <p className="font-medium text-gray-900">Rooms</p>
                     <div className="mt-2 space-y-2">
@@ -663,4 +697,8 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
       </Dialog>
     </div>
   )
+}
+
+function ManagerListSkeleton() {
+  return <StackedCardListSkeleton count={4} showImage />
 }

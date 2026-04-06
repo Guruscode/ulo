@@ -1,5 +1,6 @@
 import type { AuthUser } from '@/lib/auth/types'
 import type { HotelBookingRecord, HotelRecord } from '@/lib/hotels/types'
+import type { PropertyVerificationRequestRecord } from '@/lib/property-verification/types'
 import type { PropertyRecord } from '@/lib/properties/types'
 import { getServerEnv } from '@/lib/server/config/env'
 import { sendMailSafely } from '@/lib/server/mail/send'
@@ -259,6 +260,55 @@ export async function sendPropertyApprovalEmail(property: PropertyRecord) {
   })
 }
 
+export async function sendPropertyVerificationTrackingEmail(request: PropertyVerificationRequestRecord) {
+  await sendMailSafely({
+    to: request.requesterEmail,
+    subject: 'Your property verification request is confirmed',
+    ...renderEmail({
+      eyebrow: 'Property Verification',
+      title: 'Tracking code issued',
+      intro: `Your payment for ${request.packageName} has been confirmed and your verification request is now in review.`,
+      body: [
+        'Keep your tracking code safe. You can use it at any time to check the progress of your application.',
+        'Our team will review your submitted documents and begin the verification process based on the selected package turnaround time.',
+      ],
+      sections: [
+        { label: 'Tracking Code', value: request.trackingCode },
+        { label: 'Package', value: request.packageName },
+        { label: 'Property', value: request.propertyTitle || request.propertyAddress },
+        { label: 'Amount Paid', value: `NGN ${request.amount.toLocaleString()}` },
+      ],
+      actionLabel: 'Track Verification',
+      actionUrl: absoluteUrl(`/verify-property?tracking=${encodeURIComponent(request.trackingCode)}`),
+      closing: 'If you did not authorize this verification request, contact support immediately and include the tracking code above.',
+    }),
+  })
+
+  const adminEmail = getAdminNotificationEmail()
+  if (!adminEmail) return
+
+  await sendMailSafely({
+    to: adminEmail,
+    subject: 'New property verification request paid',
+    ...renderEmail({
+      eyebrow: 'Admin Alert',
+      title: 'A verification request is ready for review',
+      intro: 'A property verification request has been paid and should be reviewed by the operations team.',
+      body: [
+        'Use the tracking code and requester details below to begin document review and due diligence work.',
+      ],
+      sections: [
+        { label: 'Tracking Code', value: request.trackingCode },
+        { label: 'Requester', value: request.requesterName },
+        { label: 'Email', value: request.requesterEmail },
+        { label: 'Package', value: request.packageName },
+      ],
+      actionLabel: 'Open Support Page',
+      actionUrl: absoluteUrl('/help'),
+    }),
+  })
+}
+
 export async function sendHotelCreatedEmails(hotel: HotelRecord) {
   const ownerEmail = hotel.createdByEmail || hotel.contactEmail
 
@@ -382,6 +432,57 @@ export async function sendHotelBookingEmails(input: {
         { label: 'Hotel', value: hotel.name },
         { label: 'Room', value: booking.roomName },
         { label: 'Stay Dates', value: `${booking.checkInDate} to ${booking.checkOutDate}` },
+      ],
+      actionLabel: 'Browse More Hotels',
+      actionUrl: absoluteUrl('/hotels'),
+    }),
+  })
+}
+
+export async function sendHotelBookingReceiptEmails(input: {
+  hotel: HotelRecord
+  booking: HotelBookingRecord
+}) {
+  const { hotel, booking } = input
+
+  await sendMailSafely({
+    to: hotel.contactEmail,
+    subject: `Payment receipt submitted for ${hotel.name}`,
+    ...renderEmail({
+      eyebrow: 'Payment Receipt',
+      title: 'A guest uploaded a payment receipt',
+      intro: `${booking.guestName} has submitted a payment receipt for their booking at ${hotel.name}.`,
+      body: [
+        'Review the booking and receipt, then contact the guest to confirm the payment.',
+      ],
+      sections: [
+        { label: 'Guest', value: booking.guestName },
+        { label: 'Email', value: booking.guestEmail },
+        { label: 'Phone', value: booking.guestPhone },
+        { label: 'Room', value: booking.roomName },
+        { label: 'Stay Dates', value: `${booking.checkInDate} to ${booking.checkOutDate}` },
+        { label: 'Receipt URL', value: booking.paymentReceiptUrl || 'Not provided' },
+      ],
+      actionLabel: 'Open Hotel Dashboard',
+      actionUrl: absoluteUrl('/dashboard/hotels'),
+    }),
+  })
+
+  await sendMailSafely({
+    to: booking.guestEmail,
+    subject: `Receipt received for your ${hotel.name} booking`,
+    ...renderEmail({
+      eyebrow: 'Receipt Received',
+      title: 'Your payment receipt has been shared',
+      intro: `We have recorded your payment receipt for ${hotel.name}.`,
+      body: [
+        'The hotel team has been notified and will review the receipt you uploaded.',
+        'Keep your phone and email available in case the hotel needs any clarification.',
+      ],
+      sections: [
+        { label: 'Hotel', value: hotel.name },
+        { label: 'Room', value: booking.roomName },
+        { label: 'Receipt URL', value: booking.paymentReceiptUrl || 'Uploaded' },
       ],
       actionLabel: 'Browse More Hotels',
       actionUrl: absoluteUrl('/hotels'),

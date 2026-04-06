@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, ChevronLeft, Loader2, Mail, MapPin, Phone, Star, Users } from 'lucide-react'
+import { Check, ChevronLeft, Loader2, Mail, MapPin, MessageCircle, Phone, Star, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import HomeFooter from '@/components/home/home-footer'
@@ -10,6 +10,7 @@ import HomeNav from '@/components/home/home-nav'
 import { FeaturedImageGallery } from '@/components/media/featured-image-gallery'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { HotelDetailSkeleton } from '@/components/ui/page-skeletons'
 import {
   Dialog,
   DialogContent,
@@ -20,8 +21,9 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { FileUpload } from '@/components/ui/file-upload'
 import { ApiClientError } from '@/lib/client/api-error'
-import { createHotelBookingRequest, getHotelRequest } from '@/lib/client/hotels-client'
+import { createHotelBookingRequest, getHotelRequest, submitHotelBookingReceiptRequest } from '@/lib/client/hotels-client'
 import { formatHotelPrice } from '@/lib/hotels/presentation'
 import type { HotelBookingInput, HotelRecord } from '@/lib/hotels/types'
 
@@ -38,13 +40,19 @@ const EMPTY_BOOKING: HotelBookingInput = {
   departureTime: '',
 }
 
+type BookingStep = 'details' | 'payment' | 'receipt'
+
 export default function HotelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [hotel, setHotel] = useState<HotelRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [bookingOpen, setBookingOpen] = useState(false)
   const [booking, setBooking] = useState<HotelBookingInput>(EMPTY_BOOKING)
+  const [bookingStep, setBookingStep] = useState<BookingStep>('details')
   const [bookingSubmitting, setBookingSubmitting] = useState(false)
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
+  const [receiptUrl, setReceiptUrl] = useState('')
+  const [receiptSubmitting, setReceiptSubmitting] = useState(false)
 
   useEffect(() => {
     const loadHotel = async () => {
@@ -60,15 +68,45 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
     void loadHotel()
   }, [id])
 
+  const resetBookingFlow = () => {
+    setBooking(EMPTY_BOOKING)
+    setBookingStep('details')
+    setCreatedBookingId(null)
+    setReceiptUrl('')
+  }
+
+  const openBookingForRoom = (roomId: string) => {
+    setBooking({ ...EMPTY_BOOKING, roomId })
+    setBookingStep('details')
+    setCreatedBookingId(null)
+    setReceiptUrl('')
+    setBookingOpen(true)
+  }
+
+  const moveToPayment = () => {
+    if (
+      !booking.guestName.trim() ||
+      !booking.guestEmail.trim() ||
+      !booking.guestPhone.trim() ||
+      !booking.guestOrigin.trim() ||
+      !booking.checkInDate ||
+      !booking.checkOutDate
+    ) {
+      toast.error('Complete your booking details before continuing to payment.')
+      return
+    }
+    setBookingStep('payment')
+  }
+
   const submitBooking = async () => {
     if (!hotel) return
     if (bookingSubmitting) return
     setBookingSubmitting(true)
     try {
-      await createHotelBookingRequest(hotel.id, booking)
-      toast.success('Booking request submitted successfully.')
-      setBooking(EMPTY_BOOKING)
-      setBookingOpen(false)
+      const response = await createHotelBookingRequest(hotel.id, booking)
+      setCreatedBookingId(response.booking.id)
+      setBookingStep('receipt')
+      toast.success('Booking details sent. Upload your payment receipt next.')
     } catch (error) {
       const message = error instanceof ApiClientError ? error.message : 'Unable to submit booking right now.'
       toast.error(message)
@@ -77,7 +115,48 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Loading hotel...</div>
+  const submitReceipt = async () => {
+    if (!createdBookingId) return
+    if (!hotel) return
+    if (!receiptUrl) {
+      toast.error('Upload your receipt before continuing.')
+      return
+    }
+    if (receiptSubmitting) return
+
+    setReceiptSubmitting(true)
+    try {
+      await submitHotelBookingReceiptRequest(createdBookingId, receiptUrl)
+      toast.success('Receipt submitted successfully.')
+      window.location.href = buildWhatsAppUrl()
+    } catch (error) {
+      const message = error instanceof ApiClientError ? error.message : 'Unable to submit your receipt right now.'
+      toast.error(message)
+    } finally {
+      setReceiptSubmitting(false)
+    }
+  }
+
+  const buildWhatsAppUrl = () => {
+    if (!hotel) return '#'
+    const phone = hotel.contactPhone.replace(/\D/g, '')
+    const roomName = hotel.rooms.find((room) => room.id === booking.roomId)?.name || 'selected room'
+    const message = [
+      `Hello ${hotel.name},`,
+      `I have made payment for my booking.`,
+      `Name: ${booking.guestName}`,
+      `Room: ${roomName}`,
+      `Check-in: ${booking.checkInDate}`,
+      `Check-out: ${booking.checkOutDate}`,
+      createdBookingId ? `Booking ID: ${createdBookingId}` : '',
+      receiptUrl ? `Receipt: ${receiptUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+  }
+
+  if (loading) return <HotelDetailSkeleton />
 
   if (!hotel) {
     return (
@@ -154,29 +233,107 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
                           </div>
                           <div className="flex flex-col items-end gap-3">
                             <div><span className="text-2xl font-bold text-secondary">{formatHotelPrice(room.priceValue)}</span><span className="text-sm text-muted-foreground"> / night</span></div>
-                            <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
+                            <Dialog
+                              open={bookingOpen}
+                              onOpenChange={(open) => {
+                                setBookingOpen(open)
+                                if (!open) resetBookingFlow()
+                              }}
+                            >
                               <DialogTrigger asChild>
-                                <Button className="bg-secondary hover:bg-secondary/90 text-white" disabled={bookingSubmitting} onClick={() => setBooking({ ...EMPTY_BOOKING, roomId: room.id })}>Book Now</Button>
+                                <Button className="bg-secondary hover:bg-secondary/90 text-white" disabled={bookingSubmitting} onClick={() => openBookingForRoom(room.id)}>Book Now</Button>
                               </DialogTrigger>
                               <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                                <DialogHeader><DialogTitle className="text-2xl font-serif">Make a Reservation</DialogTitle><DialogDescription>Book your stay at {hotel.name}</DialogDescription></DialogHeader>
-                                <div className="space-y-6 py-4">
-                                  <div className="space-y-2"><Label>Your Name *</Label><Input value={booking.guestName} onChange={(event) => setBooking({ ...booking, guestName: event.target.value })} /></div>
-                                  <div className="space-y-2"><Label>Email Address *</Label><Input type="email" value={booking.guestEmail} onChange={(event) => setBooking({ ...booking, guestEmail: event.target.value })} /></div>
-                                  <div className="space-y-2"><Label>Phone Number *</Label><Input value={booking.guestPhone} onChange={(event) => setBooking({ ...booking, guestPhone: event.target.value })} /></div>
-                                  <div className="space-y-2"><Label>Where are you coming from? *</Label><Input value={booking.guestOrigin} onChange={(event) => setBooking({ ...booking, guestOrigin: event.target.value })} /></div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2"><Label>Check-in Date *</Label><Input type="date" value={booking.checkInDate} onChange={(event) => setBooking({ ...booking, checkInDate: event.target.value })} /></div>
-                                    <div className="space-y-2"><Label>Check-out Date *</Label><Input type="date" value={booking.checkOutDate} onChange={(event) => setBooking({ ...booking, checkOutDate: event.target.value })} /></div>
+                                <DialogHeader>
+                                  <DialogTitle className="text-2xl font-serif">
+                                    {bookingStep === 'details' ? 'Make a Reservation' : bookingStep === 'payment' ? 'Pay for Your Booking' : 'Submit Receipt'}
+                                  </DialogTitle>
+                                  <DialogDescription>
+                                    {bookingStep === 'details'
+                                      ? `Book your stay at ${hotel.name}`
+                                      : bookingStep === 'payment'
+                                        ? 'Use the hotel bank details below, then verify your payment.'
+                                        : 'Upload your receipt and notify the hotel on WhatsApp.'}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                {bookingStep === 'details' ? (
+                                  <div className="space-y-6 py-4">
+                                    <div className="space-y-2"><Label>Your Name *</Label><Input value={booking.guestName} onChange={(event) => setBooking({ ...booking, guestName: event.target.value })} /></div>
+                                    <div className="space-y-2"><Label>Email Address *</Label><Input type="email" value={booking.guestEmail} onChange={(event) => setBooking({ ...booking, guestEmail: event.target.value })} /></div>
+                                    <div className="space-y-2"><Label>Phone Number *</Label><Input value={booking.guestPhone} onChange={(event) => setBooking({ ...booking, guestPhone: event.target.value })} /></div>
+                                    <div className="space-y-2"><Label>Where are you coming from? *</Label><Input value={booking.guestOrigin} onChange={(event) => setBooking({ ...booking, guestOrigin: event.target.value })} /></div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2"><Label>Check-in Date *</Label><Input type="date" value={booking.checkInDate} onChange={(event) => setBooking({ ...booking, checkInDate: event.target.value })} /></div>
+                                      <div className="space-y-2"><Label>Check-out Date *</Label><Input type="date" value={booking.checkOutDate} onChange={(event) => setBooking({ ...booking, checkOutDate: event.target.value })} /></div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2"><Label>Adults</Label><Input type="number" min="1" value={booking.adults} onChange={(event) => setBooking({ ...booking, adults: Number(event.target.value) })} /></div>
+                                      <div className="space-y-2"><Label>Children</Label><Input type="number" min="0" value={booking.children} onChange={(event) => setBooking({ ...booking, children: Number(event.target.value) })} /></div>
+                                    </div>
+                                    <Button type="button" className="w-full bg-secondary hover:bg-secondary/90 text-white" onClick={moveToPayment}>
+                                      Continue to Payment
+                                    </Button>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2"><Label>Adults</Label><Input type="number" min="1" value={booking.adults} onChange={(event) => setBooking({ ...booking, adults: Number(event.target.value) })} /></div>
-                                    <div className="space-y-2"><Label>Children</Label><Input type="number" min="0" value={booking.children} onChange={(event) => setBooking({ ...booking, children: Number(event.target.value) })} /></div>
+                                ) : null}
+                                {bookingStep === 'payment' ? (
+                                  <div className="space-y-6 py-4">
+                                    <Card className="border-secondary/20 bg-secondary/5 p-4">
+                                      <p className="text-sm text-muted-foreground">Bank Name</p>
+                                      <p className="text-lg font-semibold text-foreground">{hotel.bankName}</p>
+                                      <p className="mt-3 text-sm text-muted-foreground">Account Name</p>
+                                      <p className="text-lg font-semibold text-foreground">{hotel.bankAccountName}</p>
+                                      <p className="mt-3 text-sm text-muted-foreground">Account Number</p>
+                                      <p className="text-2xl font-bold tracking-wide text-secondary">{hotel.bankAccountNumber}</p>
+                                    </Card>
+                                    <Card className="p-4">
+                                      <p className="font-semibold text-foreground">Booking summary</p>
+                                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                                        <p>Guest: {booking.guestName}</p>
+                                        <p>Room: {hotel.rooms.find((room) => room.id === booking.roomId)?.name || 'Selected room'}</p>
+                                        <p>Stay: {booking.checkInDate} to {booking.checkOutDate}</p>
+                                        <p>WhatsApp/Phone: {hotel.contactPhone}</p>
+                                      </div>
+                                    </Card>
+                                    <div className="flex gap-3">
+                                      <Button type="button" variant="outline" className="flex-1" onClick={() => setBookingStep('details')}>
+                                        Back
+                                      </Button>
+                                      <Button type="button" className="flex-1 bg-secondary hover:bg-secondary/90 text-white" disabled={bookingSubmitting} onClick={() => void submitBooking()}>
+                                        {bookingSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</> : 'Click to Verify Payment'}
+                                      </Button>
+                                    </div>
                                   </div>
-                                  <Button type="button" className="w-full bg-secondary hover:bg-secondary/90 text-white" disabled={bookingSubmitting} onClick={() => void submitBooking()}>
-                                    {bookingSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</> : 'Submit Reservation'}
-                                  </Button>
-                                </div>
+                                ) : null}
+                                {bookingStep === 'receipt' ? (
+                                  <div className="space-y-6 py-4">
+                                    <Card className="border-emerald-200 bg-emerald-50 p-4">
+                                      <p className="font-semibold text-emerald-900">Booking details sent</p>
+                                      <p className="mt-1 text-sm text-emerald-800">
+                                        Your booking request has been recorded and emailed to the hotel. Upload your receipt and WhatsApp will open automatically.
+                                      </p>
+                                      {createdBookingId ? <p className="mt-2 text-xs text-emerald-700">Booking ID: {createdBookingId}</p> : null}
+                                    </Card>
+                                    <div className="space-y-2">
+                                      <Label>Upload Receipt</Label>
+                                      <FileUpload
+                                        id="hotel-booking-receipt"
+                                        label="Upload Payment Receipt"
+                                        uploadingLabel="Uploading receipt..."
+                                        accept="image/*"
+                                        maxSizeMb={4}
+                                        onUpload={(url) => setReceiptUrl(url)}
+                                      />
+                                      {receiptUrl ? (
+                                        <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-secondary underline underline-offset-4">
+                                          View uploaded receipt
+                                        </a>
+                                      ) : null}
+                                    </div>
+                                    <Button type="button" className="w-full bg-secondary hover:bg-secondary/90 text-white" disabled={receiptSubmitting || !receiptUrl} onClick={() => void submitReceipt()}>
+                                      {receiptSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting receipt...</> : <><MessageCircle className="mr-2 h-4 w-4" />Send Receipt and Open WhatsApp</>}
+                                    </Button>
+                                  </div>
+                                ) : null}
                               </DialogContent>
                             </Dialog>
                           </div>
@@ -200,7 +357,7 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
             <Card className="p-6 bg-gradient-to-br from-secondary to-secondary/80 text-white">
               <h3 className="text-lg font-bold mb-2">Quick Booking</h3>
               <p className="text-white/80 text-sm mb-4">Ready to book? Select a room and start your reservation.</p>
-              <Button className="w-full bg-white text-secondary hover:bg-white/90 font-semibold" disabled={bookingSubmitting} onClick={() => { if (hotel.rooms[0]) { setBooking({ ...EMPTY_BOOKING, roomId: hotel.rooms[0].id }); setBookingOpen(true) } }}>Book Now</Button>
+              <Button className="w-full bg-white text-secondary hover:bg-white/90 font-semibold" disabled={bookingSubmitting} onClick={() => { if (hotel.rooms[0]) { openBookingForRoom(hotel.rooms[0].id) } }}>Book Now</Button>
             </Card>
           </div>
         </div>

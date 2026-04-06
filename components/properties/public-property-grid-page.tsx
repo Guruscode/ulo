@@ -8,6 +8,7 @@ import HomeNav from '@/components/home/home-nav'
 import PropertyCard from '@/components/home/property-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PropertyGridSkeleton } from '@/components/ui/page-skeletons'
 import { usePublicHomeProperties } from '@/components/properties/use-public-home-properties'
 
 type PublicPropertyGridMode =
@@ -75,12 +76,12 @@ export function PublicPropertyGridPage({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl md:text-4xl font-serif font-bold text-secondary">
-            {loading ? 'Loading...' : `${filteredProperties.length} ${filteredProperties.length === 1 ? 'Listing' : 'Listings'}`}
+            {loading ? <PropertyCountSkeleton /> : `${filteredProperties.length} ${filteredProperties.length === 1 ? 'Listing' : 'Listings'}`}
           </h2>
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-muted-foreground text-lg">Loading approved properties...</div>
+          <PropertyGridSkeleton />
         ) : filteredProperties.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground text-lg">
             {searchQuery ? 'No properties found matching your search.' : 'No approved properties available in this category yet.'}
@@ -97,4 +98,8 @@ export function PublicPropertyGridPage({
       <HomeFooter />
     </div>
   )
+}
+
+function PropertyCountSkeleton() {
+  return <span className="block h-10 w-36 animate-pulse rounded-md bg-muted" aria-hidden="true" />
 }

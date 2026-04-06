@@ -133,7 +133,7 @@ export default function SignupPageClient() {
         <div className="relative z-10 flex flex-col items-center justify-center w-full h-full px-12 text-center text-white">
           <div className="mb-8">
             <Image
-              src="/logo-transperient.png"
+              src="/brand/logo-white.svg"
               alt="ULO"
               width={220}
               height={72}
@@ -151,7 +151,7 @@ export default function SignupPageClient() {
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-16 py-12 bg-white">
         <div className="lg:hidden flex items-center justify-center mb-8">
           <Image
-            src="/ulo-logo.png"
+            src="/brand/logo-primary.svg"
             alt="ULO"
             width={220}
             height={72}

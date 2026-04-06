@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { StackedCardListSkeleton } from '@/components/ui/page-skeletons'
 import { ApiClientError } from '@/lib/client/api-error'
 import { deleteNotificationRequest, listNotificationsRequest } from '@/lib/client/notification-client'
 import type { UserNotificationRecord } from '@/lib/server/notifications/types'
@@ -49,7 +50,7 @@ export default function DashboardNotificationsPage() {
           <p className="text-gray-600 mt-1">Property and hotel updates sent to your dashboard.</p>
         </div>
 
-        {isLoading ? <Card className="p-10 text-center">Loading notifications...</Card> : null}
+        {isLoading ? <StackedCardListSkeleton count={4} /> : null}
 
         {!isLoading && notifications.length === 0 ? (
           <Card className="p-12 text-center">

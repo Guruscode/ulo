@@ -10,7 +10,7 @@ import type {
   HotelUpsertInput,
 } from '@/lib/hotels/types'
 import { ApiError } from '@/lib/server/http/api-error'
-import { sendHotelApprovalEmail, sendHotelBookingEmails, sendHotelCreatedEmails } from '@/lib/server/mail/notifications'
+import { sendHotelApprovalEmail, sendHotelBookingEmails, sendHotelBookingReceiptEmails, sendHotelCreatedEmails } from '@/lib/server/mail/notifications'
 import { createUserNotification } from '@/lib/server/notifications/service'
 import { assertListingCapacity } from '@/lib/server/subscriptions/service'
 import {
@@ -25,6 +25,7 @@ import {
   slugExists,
   updateHotel,
   updateHotelApproval,
+  updateHotelBookingPaymentReceipt,
   updateHotelBookingStatus,
 } from '@/lib/server/hotels/repository'
 import { seededHotels } from '@/lib/server/hotels/seed-data'
@@ -54,6 +55,9 @@ const hotelSchema = z.object({
   contactPhone: z.string().trim().min(7),
   contactEmail: z.string().trim().email(),
   contactAddress: z.string().trim().min(5),
+  bankName: z.string().trim().min(2),
+  bankAccountName: z.string().trim().min(2),
+  bankAccountNumber: z.string().trim().min(6),
   featured: z.boolean().optional(),
   status: z.enum(['active', 'inactive', 'pending']),
   rooms: z.array(roomSchema).min(1),
@@ -336,5 +340,29 @@ export async function updateBookingStatusForActor(id: string, status: HotelBooki
 
   const booking = await updateHotelBookingStatus(id, parsedStatus.data)
   if (!booking) throw new ApiError(404, 'BOOKING_NOT_FOUND', 'Booking not found.')
+  return booking
+}
+
+export async function submitHotelBookingReceipt(id: string, input: unknown) {
+  const parsed = z.object({
+    receiptUrl: z.string().trim().url('Please upload a valid receipt file.'),
+  }).safeParse(input)
+
+  if (!parsed.success) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Please provide a valid receipt upload.', parsed.error.flatten())
+  }
+
+  const existing = await findHotelBookingById(id)
+  if (!existing) throw new ApiError(404, 'BOOKING_NOT_FOUND', 'Booking not found.')
+  const hotel = await findHotelById(existing.hotelId)
+  if (!hotel) throw new ApiError(404, 'HOTEL_NOT_FOUND', 'Hotel not found.')
+
+  const booking = await updateHotelBookingPaymentReceipt(id, {
+    receiptUrl: parsed.data.receiptUrl,
+    paymentStatus: 'payment_submitted',
+  })
+
+  if (!booking) throw new ApiError(404, 'BOOKING_NOT_FOUND', 'Booking not found.')
+  await sendHotelBookingReceiptEmails({ hotel, booking })
   return booking
 }

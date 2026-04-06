@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { StackedCardListSkeleton } from '@/components/ui/page-skeletons'
 import {
   Select,
   SelectContent,
@@ -208,7 +209,7 @@ export default function AdminBlogPage() {
           </div>
         </Card>
 
-        {isLoading ? <Card className="p-10 text-center">Loading blog posts...</Card> : null}
+        {isLoading ? <StackedCardListSkeleton count={4} showImage /> : null}
 
         {!isLoading && filteredBlogs.length === 0 ? (
           <Card className="p-10 text-center text-slate-600">No blog posts found.</Card>

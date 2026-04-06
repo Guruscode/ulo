@@ -26,6 +26,9 @@ export const seededHotels: HotelUpsertInput[] = [
     contactPhone: '+2347001000001',
     contactEmail: 'bookings@ekosignature.com',
     contactAddress: 'Adetokunbo Ademola Street, Victoria Island, Lagos',
+    bankName: 'First Bank',
+    bankAccountName: 'Eko Signature Suites',
+    bankAccountNumber: '2014567890',
     featured: true,
     status: 'active',
     rooms: [
@@ -70,6 +73,9 @@ export const seededHotels: HotelUpsertInput[] = [
     contactPhone: '+2347001000002',
     contactEmail: 'stay@abujagrand.com',
     contactAddress: 'Colorado Close, Maitama, Abuja',
+    bankName: 'GTBank',
+    bankAccountName: 'Abuja Grand Hotel',
+    bankAccountNumber: '0123456789',
     featured: false,
     status: 'active',
     rooms: [
@@ -114,6 +120,9 @@ export const seededHotels: HotelUpsertInput[] = [
     contactPhone: '+2347001000003',
     contactEmail: 'reservations@coastlinelekki.com',
     contactAddress: 'Lekki Peninsula, Lagos',
+    bankName: 'Access Bank',
+    bankAccountName: 'Coastline Resort Lekki',
+    bankAccountNumber: '1029384756',
     featured: true,
     status: 'active',
     rooms: [

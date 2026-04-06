@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { StackedCardListSkeleton } from '@/components/ui/page-skeletons'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiClientError } from '@/lib/client/api-error'
 import {
@@ -169,7 +170,7 @@ export default function AdminNeighbourhoodsPage() {
           </Button>
         </div>
 
-        {isLoading ? <Card className="p-10 text-center">Loading neighbourhoods...</Card> : null}
+        {isLoading ? <StackedCardListSkeleton count={4} showImage /> : null}
 
         {!isLoading && items.length === 0 ? <Card className="p-10 text-center text-slate-600">No neighbourhoods found.</Card> : null}
 

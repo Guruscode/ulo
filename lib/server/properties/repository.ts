@@ -490,6 +490,27 @@ export async function updatePropertyApproval(
   return findPropertyById(id)
 }
 
+export async function updatePropertyVerificationStatus(
+  id: string,
+  verificationStatus: PropertyRecord['verificationStatus']
+) {
+  await initializeDatabase()
+
+  const db = getDbClient()
+  await db.execute({
+    sql: `
+      UPDATE properties
+      SET
+        verification_status = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+    args: [verificationStatus, id],
+  })
+
+  return findPropertyById(id)
+}
+
 export async function deleteProperty(id: string) {
   await initializeDatabase()
 

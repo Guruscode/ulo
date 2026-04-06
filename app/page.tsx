@@ -110,8 +110,9 @@ export default function Homepage() {
         onQuickTypeChange={setQuickType}
         onSearch={handleSearch}
       />
-      <HeroServices />
+  
       <HomeProperties allProperties={properties} filteredProperties={filteredProperties} />
+      <HeroServices />
       <HomeHotels />
       <NeighbourhoodGuide />
       {/* <EstateSection estates={homeEstates} /> */}

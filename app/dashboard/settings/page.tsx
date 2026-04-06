@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FileUpload } from '@/components/ui/file-upload'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -186,7 +187,11 @@ export default function DashboardSettingsPage() {
               )}
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-gray-900 text-lg">{user?.name || 'Loading...'}</p>
+              {user?.name ? (
+                <p className="font-semibold text-gray-900 text-lg">{user.name}</p>
+              ) : (
+                <Skeleton className="h-6 w-32" />
+              )}
               <p className="text-gray-500">{user?.role === 'admin' ? 'Admin' : settings.accountType.replace('_', ' ')}</p>
               <div className="mt-4 max-w-xs space-y-3">
                 <FileUpload

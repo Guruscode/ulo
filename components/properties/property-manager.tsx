@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { StackedCardListSkeleton } from '@/components/ui/page-skeletons'
 import {
   Select,
   SelectContent,
@@ -501,10 +502,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
       </Card>
 
       {loading ? (
-        <Card className="flex items-center justify-center p-12 text-gray-500">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Loading properties...
-        </Card>
+        <ManagerListSkeleton />
       ) : properties.length === 0 ? (
         <Card className="p-12 text-center">
           <h2 className="text-xl font-semibold text-gray-900">No properties yet</h2>
@@ -1030,4 +1028,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
       </Dialog>
     </div>
   )
+}
+
+function ManagerListSkeleton() {
+  return <StackedCardListSkeleton count={4} showImage />
 }

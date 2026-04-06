@@ -50,7 +50,7 @@ export default function HomeFooter() {
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/60">
           <div className="ml-2 sm:ml-4 flex items-center gap-3">
             <Image
-              src="/logo-transperient.png"
+              src="/brand/logo-white.svg"
               alt="ULO"
               width={212}
               height={64}

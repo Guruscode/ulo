@@ -54,7 +54,7 @@ export default function HomeNav() {
         {/* Logo */}
         <Link href="/" className="z-10 ml-2 sm:ml-4 lg:ml-6 group">
           <Image
-            src="/logo-transperient.png"
+            src="/brand/logo-white.svg"
             alt="ULO"
             width={212}
             height={64}

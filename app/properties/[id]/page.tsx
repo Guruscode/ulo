@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { use, useEffect, useState } from 'react'
 import {
+  CircleAlert,
   ChevronRight,
   Droplets,
   Heart,
@@ -18,18 +19,7 @@ import { FeaturedImageGallery } from '@/components/media/featured-image-gallery'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { ApiClientError } from '@/lib/client/api-error'
+import { PropertyDetailSkeleton } from '@/components/ui/page-skeletons'
 import { getPropertyRequest, savePropertyRequest, unsavePropertyRequest } from '@/lib/client/properties-client'
 import { DEFAULT_PROPERTY_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
 import { formatPropertyPrice } from '@/lib/properties/presentation'
@@ -40,6 +30,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const { id } = use(params)
   const [property, setProperty] = useState<PropertyRecord | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showPhone, setShowPhone] = useState(false)
   const { isAuthenticated } = useAuth()
 
   useEffect(() => {
@@ -58,11 +49,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   }, [id])
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-foreground/70">Loading property...</p>
-      </div>
-    )
+    return <PropertyDetailSkeleton />
   }
 
   if (!property) {
@@ -84,6 +71,8 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       : encodeURIComponent(`${property.title}, ${property.location}`)
 
   const listedByLabel = property.listedBy
+  const contactRoleLabel = property.listedBy === 'Owner' ? 'Owner' : property.listedBy === 'Landlord' ? 'Landlord' : 'Agent'
+  const maskedPhone = maskPhoneNumber(property.contactPhone)
   const images =
     property.imageUrls.length > 0
       ? property.imageUrls.map((imageUrl) => resolveImageUrl(imageUrl, DEFAULT_PROPERTY_IMAGE))
@@ -197,48 +186,122 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             <div className="px-8 pb-8 text-sm text-foreground/60">Map centered on {property.location}.</div>
           </Card>
 
-          <Card className="border-amber-200 bg-amber-50 p-6">
-            <h2 className="text-lg font-bold text-amber-900 mb-2">Disclaimer</h2>
-            <p className="text-sm leading-6 text-amber-800">
-              ULO is not affiliated with this property listing or the party that posted it. We recommend that you contact us first if you want help verifying the authenticity, availability, and details of this property before making any commitment.
-            </p>
+          <Card className="overflow-hidden border border-slate-200 bg-white p-0 shadow-none">
+            <div className="border-b border-slate-200 bg-slate-50 px-6 py-5 md:px-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                  <CircleAlert className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 md:text-3xl">Safety Tips</h2>
+                  <p className="text-sm text-slate-600 md:text-base">
+                    A few checks to make before you pay or commit.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 px-6 py-6 md:grid-cols-2 md:px-8 md:py-8">
+              {[
+                'Do not pay any inspection fee before seeing both the agent and the property.',
+                'Only make rental, sales, or other upfront payments after verifying the landlord.',
+                'Arrange to meet the agent in an open, public location.',
+                'ULO does not represent the advertiser and is not liable for monetary transactions between you and the agent.',
+              ].map((tip, index) => (
+                <div key={tip} className="rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                      {index + 1}
+                    </div>
+                    <p className="text-base leading-7 text-slate-700">{tip}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </Card>
 
-          <Card className="p-8 bg-gradient-to-r from-primary to-secondary text-white">
+          <Card className="border-0 bg-gradient-to-r from-[#fff1bf] via-[#ffd6e7] to-[#c8f7ff] p-8 text-slate-950">
             <h2 className="text-2xl font-bold mb-4">Interested in This Property?</h2>
-            <p className="mb-6 text-white/90">Contact our team today to schedule a tour or get more information.</p>
-            <div className="flex flex-col lg:flex-row gap-4">
-              <a href={`tel:${property.contactPhone}`} className="flex-1">
-                <Button size="lg" className="w-full bg-white text-primary hover:bg-white/90">Call Contact</Button>
-              </a>
-              <a href={`mailto:${property.contactEmail}`} className="flex-1">
-                <Button size="lg" variant="outline" className="w-full border-white text-white hover:bg-white/10">Email Contact</Button>
-              </a>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="lg" variant="outline" className="flex-1 border-white text-white hover:bg-white/10">
-                    Verify This Property
+            <p className="mb-6 text-slate-700">Contact the {contactRoleLabel.toLowerCase()} directly or start a verification request before you commit.</p>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {showPhone ? (
+                <a href={`tel:${property.contactPhone}`} className="flex-1">
+                  <Button size="lg" className="flex h-full min-h-[76px] w-full items-center border-0 bg-[#2563eb] px-5 py-4 text-white hover:bg-[#1d4ed8]">
+                    <span className="flex flex-col items-start text-left">
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                        Call {contactRoleLabel}
+                      </span>
+                      <span className="text-lg font-bold">{property.contactPhone}</span>
+                    </span>
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Verify This Property</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      ULO can help you verify the property details, ownership claims, and current availability before you proceed.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction asChild>
-                      <Link href="/help">Contact Admin</Link>
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                </a>
+              ) : (
+                <Button
+                  size="lg"
+                  onClick={() => setShowPhone(true)}
+                  className="flex min-h-[76px] w-full items-center bg-[#2563eb] px-5 py-4 text-white hover:bg-[#1d4ed8]"
+                >
+                  <span className="flex w-full items-center justify-between gap-4">
+                    <span className="flex flex-col items-start text-left">
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                        Call {contactRoleLabel}
+                      </span>
+                      <span className="text-lg font-bold">{maskedPhone}</span>
+                    </span>
+                    <span className="rounded-full border border-white/50 bg-white/10 px-4 py-1 text-sm font-semibold text-white">
+                      Show
+                    </span>
+                  </span>
+                </Button>
+              )}
+              <a href={`mailto:${property.contactEmail}`} className="flex-1">
+                <Button
+                  size="lg"
+                  className="min-h-[76px] w-full border-0 bg-[#22c55e] px-5 py-4 text-left text-white hover:bg-[#16a34a]"
+                >
+                  <span className="flex flex-col items-start">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                      Email {contactRoleLabel}
+                    </span>
+                    <span className="text-lg font-bold">{property.contactEmail}</span>
+                  </span>
+                </Button>
+              </a>
+              <Link
+                className="flex-1"
+                href={{
+                  pathname: '/verify-property',
+                  query: {
+                    propertyId: property.id,
+                    title: property.title,
+                    location: property.location,
+                    address: property.fullAddress,
+                  },
+                }}
+              >
+                <Button size="lg" className="min-h-[76px] w-full bg-[#f97316] px-5 py-4 text-white hover:bg-[#ea580c]">
+                  <span className="flex flex-col items-start text-left">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                      Verification
+                    </span>
+                    <span className="text-lg font-bold">Verify This Property</span>
+                  </span>
+                </Button>
+              </Link>
             </div>
           </Card>
         </motion.div>
       </section>
     </div>
   )
+}
+
+function maskPhoneNumber(phone: string) {
+  if (phone.length <= 6) {
+    return phone
+  }
+
+  const visiblePrefix = phone.slice(0, Math.min(6, phone.length - 3))
+  const visibleSuffix = phone.slice(-3)
+  return `${visiblePrefix}***${visibleSuffix}`
 }

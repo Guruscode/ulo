@@ -13,7 +13,7 @@ import { ApiClientError } from '@/lib/client/api-error'
 import { createBlogCommentRequest, deleteBlogCommentRequest } from '@/lib/client/blog-client'
 import type { BlogCommentRecord } from '@/lib/server/blog/types'
 
-const DEFAULT_COMMENT_IMAGE = '/logo-transperient.png'
+const DEFAULT_COMMENT_IMAGE = '/brand/favicon-black.png'
 
 export function BlogComments({
   slug,

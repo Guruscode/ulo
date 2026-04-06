@@ -13,7 +13,7 @@ import { ApiClientError } from '@/lib/client/api-error'
 import { getAgentRequest } from '@/lib/client/users-client'
 import type { AuthUser } from '@/lib/auth/types'
 
-const DEFAULT_AGENT_IMAGE = '/logo-transperient.png'
+const DEFAULT_AGENT_IMAGE = '/brand/favicon-black.png'
 
 export default function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)

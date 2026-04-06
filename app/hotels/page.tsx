@@ -10,6 +10,7 @@ import { usePublicHotels } from '@/components/hotels/use-public-hotels'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { HotelGridSkeleton } from '@/components/ui/page-skeletons'
 import { formatHotelPrice } from '@/lib/hotels/presentation'
 
 export default function HotelsPage() {
@@ -41,10 +42,10 @@ export default function HotelsPage() {
       </section>
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-24">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-secondary">{loading ? 'Loading...' : `${filteredHotels.length} ${filteredHotels.length === 1 ? 'Hotel' : 'Hotels'}`}</h2>
+          <h2 className="text-3xl md:text-4xl font-serif font-bold text-secondary">{loading ? <HotelCountSkeleton /> : `${filteredHotels.length} ${filteredHotels.length === 1 ? 'Hotel' : 'Hotels'}`}</h2>
         </div>
         {loading ? (
-          <div className="text-center py-20 text-muted-foreground text-lg">Loading approved hotels...</div>
+          <HotelGridSkeleton />
         ) : filteredHotels.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground text-lg">{searchQuery ? 'No hotels found matching your search.' : 'No approved hotels available at the moment.'}</div>
         ) : (
@@ -84,4 +85,8 @@ export default function HotelsPage() {
       <HomeFooter />
     </div>
   )
+}
+
+function HotelCountSkeleton() {
+  return <span className="block h-10 w-36 animate-pulse rounded-md bg-muted" aria-hidden="true" />
 }

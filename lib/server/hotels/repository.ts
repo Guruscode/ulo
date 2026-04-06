@@ -75,6 +75,9 @@ function mapHotelRow(row: ResultSet['rows'][number], rooms: HotelRoomRecord[]): 
     contactPhone: String(row.contact_phone),
     contactEmail: String(row.contact_email),
     contactAddress: String(row.contact_address),
+    bankName: String(row.bank_name ?? ''),
+    bankAccountName: String(row.bank_account_name ?? ''),
+    bankAccountNumber: String(row.bank_account_number ?? ''),
     approvalStatus: row.approval_status as HotelApprovalStatus,
     status: row.status as HotelStatus,
     featured: Number(row.featured) === 1,
@@ -222,6 +225,7 @@ export async function createHotel(input: {
       INSERT INTO hotels (
         id, slug, name, location, description, rating, review_count, price_value,
         images_json, amenities_json, contact_phone, contact_email, contact_address,
+        bank_name, bank_account_name, bank_account_number,
         approval_status, status, featured, created_by_user_id, approved_by_user_id,
         approved_at, rejection_reason, created_at, updated_at
       )
@@ -241,6 +245,9 @@ export async function createHotel(input: {
       input.contactPhone,
       input.contactEmail,
       input.contactAddress,
+      input.bankName,
+      input.bankAccountName,
+      input.bankAccountNumber,
       input.approvalStatus,
       input.status,
       input.featured ? 1 : 0,
@@ -284,6 +291,9 @@ export async function updateHotel(
         contact_phone = ?,
         contact_email = ?,
         contact_address = ?,
+        bank_name = ?,
+        bank_account_name = ?,
+        bank_account_number = ?,
         approval_status = ?,
         status = ?,
         featured = ?,
@@ -306,6 +316,9 @@ export async function updateHotel(
       input.contactPhone,
       input.contactEmail,
       input.contactAddress,
+      input.bankName,
+      input.bankAccountName,
+      input.bankAccountNumber,
       input.approvalStatus,
       input.status,
       input.featured ? 1 : 0,
@@ -392,6 +405,9 @@ export async function createHotelBooking(input: {
   checkOutDate: string
   departureTime?: string | null
   status: HotelBookingStatus
+  paymentStatus?: HotelBookingRecord['paymentStatus']
+  paymentReceiptUrl?: string | null
+  paymentSubmittedAt?: string | null
   createdByUserId?: string | null
 }) {
   await initializeDatabase()
@@ -400,9 +416,10 @@ export async function createHotelBooking(input: {
     sql: `
       INSERT INTO hotel_bookings (
         id, hotel_id, room_id, guest_name, guest_email, guest_phone, guest_origin, adults, children,
-        check_in_date, check_out_date, departure_time, status, created_by_user_id, created_at, updated_at
+        check_in_date, check_out_date, departure_time, status, payment_status, payment_receipt_url,
+        payment_submitted_at, created_by_user_id, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `,
     args: [
       input.id,
@@ -418,6 +435,9 @@ export async function createHotelBooking(input: {
       input.checkOutDate,
       input.departureTime ?? null,
       input.status,
+      input.paymentStatus ?? 'unpaid',
+      input.paymentReceiptUrl ?? null,
+      input.paymentSubmittedAt ?? null,
       input.createdByUserId ?? null,
     ],
   })
@@ -459,6 +479,9 @@ export async function findHotelBookingById(id: string) {
     checkOutDate: String(row.check_out_date),
     departureTime: row.departure_time ? String(row.departure_time) : null,
     status: row.status as HotelBookingStatus,
+    paymentStatus: String(row.payment_status ?? 'unpaid') as HotelBookingRecord['paymentStatus'],
+    paymentReceiptUrl: row.payment_receipt_url ? String(row.payment_receipt_url) : null,
+    paymentSubmittedAt: row.payment_submitted_at ? String(row.payment_submitted_at) : null,
     createdByUserId: row.created_by_user_id ? String(row.created_by_user_id) : null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -508,6 +531,9 @@ export async function listHotelBookings(scope: 'mine' | 'admin', userId?: string
     checkOutDate: String(row.check_out_date),
     departureTime: row.departure_time ? String(row.departure_time) : null,
     status: row.status as HotelBookingStatus,
+    paymentStatus: String(row.payment_status ?? 'unpaid') as HotelBookingRecord['paymentStatus'],
+    paymentReceiptUrl: row.payment_receipt_url ? String(row.payment_receipt_url) : null,
+    paymentSubmittedAt: row.payment_submitted_at ? String(row.payment_submitted_at) : null,
     createdByUserId: row.created_by_user_id ? String(row.created_by_user_id) : null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -520,6 +546,30 @@ export async function updateHotelBookingStatus(id: string, status: HotelBookingS
   await db.execute({
     sql: `UPDATE hotel_bookings SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
     args: [status, id],
+  })
+  return findHotelBookingById(id)
+}
+
+export async function updateHotelBookingPaymentReceipt(
+  id: string,
+  input: {
+    receiptUrl: string
+    paymentStatus?: HotelBookingRecord['paymentStatus']
+  }
+) {
+  await initializeDatabase()
+  const db = getDbClient()
+  await db.execute({
+    sql: `
+      UPDATE hotel_bookings
+      SET
+        payment_receipt_url = ?,
+        payment_status = ?,
+        payment_submitted_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+    args: [input.receiptUrl, input.paymentStatus ?? 'payment_submitted', id],
   })
   return findHotelBookingById(id)
 }

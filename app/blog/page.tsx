@@ -10,6 +10,7 @@ import HomeNav from '@/components/home/home-nav'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { StackedCardListSkeleton } from '@/components/ui/page-skeletons'
 import { ApiClientError } from '@/lib/client/api-error'
 import { listBlogsRequest } from '@/lib/client/blog-client'
 import type { BlogRecord } from '@/lib/server/blog/types'
@@ -99,7 +100,7 @@ export default function BlogPage() {
         </section>
 
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          {isLoading ? <Card className="p-10 text-center">Loading blog posts...</Card> : null}
+          {isLoading ? <StackedCardListSkeleton count={6} showImage /> : null}
           {error ? <Card className="p-10 text-center text-red-600">{error}</Card> : null}
           {!isLoading && !error && filteredBlogs.length === 0 ? (
             <Card className="p-10 text-center text-foreground/70">No articles found for your current filters.</Card>

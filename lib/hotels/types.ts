@@ -3,6 +3,7 @@ import type { UserRole } from '@/lib/auth/types'
 export type HotelApprovalStatus = 'draft' | 'pending_review' | 'approved' | 'rejected'
 export type HotelStatus = 'active' | 'inactive' | 'pending'
 export type HotelBookingStatus = 'pending' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled'
+export type HotelBookingPaymentStatus = 'unpaid' | 'payment_submitted' | 'payment_verified'
 
 export interface HotelRoomRecord {
   id: string
@@ -37,6 +38,9 @@ export interface HotelRecord {
   contactPhone: string
   contactEmail: string
   contactAddress: string
+  bankName: string
+  bankAccountName: string
+  bankAccountNumber: string
   rooms: HotelRoomRecord[]
   approvalStatus: HotelApprovalStatus
   status: HotelStatus
@@ -68,6 +72,9 @@ export interface HotelBookingRecord {
   checkOutDate: string
   departureTime: string | null
   status: HotelBookingStatus
+  paymentStatus: HotelBookingPaymentStatus
+  paymentReceiptUrl: string | null
+  paymentSubmittedAt: string | null
   createdByUserId: string | null
   createdAt: string
   updatedAt: string
@@ -98,6 +105,9 @@ export interface HotelUpsertInput {
   contactPhone: string
   contactEmail: string
   contactAddress: string
+  bankName: string
+  bankAccountName: string
+  bankAccountNumber: string
   featured?: boolean
   status: HotelStatus
   rooms: HotelUpsertRoomInput[]

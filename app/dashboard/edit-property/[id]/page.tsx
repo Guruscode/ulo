@@ -69,7 +69,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link href="/" className="ml-2 sm:ml-4 flex items-center">
             <Image
-              src="/ulo-logo.png"
+              src="/brand/logo-primary.svg"
               alt="ULO"
               width={212}
               height={64}

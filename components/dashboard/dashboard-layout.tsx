@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AuthenticatedUserMenu } from '@/components/auth/authenticated-user-menu'
 import { toast } from 'sonner'
 
@@ -81,17 +82,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }
 
-  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+  const isCollapsedDesktop = !sidebarOpen
+
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
+    const showExpandedSidebar = isMobile || sidebarOpen
+
+    return (
     <div className="flex flex-col h-full bg-white">
       {/* Logo */}
-      <div className="h-20 flex items-center justify-between px-4 border-b border-gray-100">
-        <Link href="/" className="ml-2 flex items-center" onClick={() => isMobile && setMobileMenuOpen(false)}>
+      <div
+        className={`h-20 flex items-center border-b border-gray-100 ${showExpandedSidebar ? 'justify-between px-4' : 'justify-center px-2'}`}
+      >
+        <Link
+          href="/"
+          className={`flex items-center ${showExpandedSidebar ? 'ml-2' : 'justify-center'}`}
+          onClick={() => isMobile && setMobileMenuOpen(false)}
+        >
           <Image
-            src="/ulo-logo.png"
+            src={showExpandedSidebar ? '/brand/logo-primary.svg' : '/brand/favicon-black.png'}
             alt="ULO"
-            width={212}
-            height={64}
-            className="h-14 w-auto"
+            width={showExpandedSidebar ? 212 : 40}
+            height={showExpandedSidebar ? 64 : 40}
+            className={showExpandedSidebar ? 'h-14 w-auto' : 'h-10 w-10 object-contain'}
             priority
           />
         </Link>
@@ -103,15 +115,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* User Info */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center gap-3">
+      <div className={`border-b border-gray-100 ${showExpandedSidebar ? 'p-4' : 'px-2 py-4'}`}>
+        <div className={`flex items-center ${showExpandedSidebar ? 'gap-3' : 'justify-center'}`}>
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary flex items-center justify-center">
             <User className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <p className="font-semibold text-gray-900 text-sm">{displayName}</p>
-            <p className="text-xs text-gray-500">{user?.email || 'Dashboard'}</p>
-          </div>
+          {showExpandedSidebar ? (
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">{displayName}</p>
+              <p className="text-xs text-gray-500">{user?.email || 'Dashboard'}</p>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -122,19 +136,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             const Icon = item.icon
             const isActive = pathname === item.href
             return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={() => isMobile && setMobileMenuOpen(false)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                  isActive
-                    ? 'bg-secondary text-white'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {item.label}
-              </Link>
+              <TooltipProvider key={item.id} delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      onClick={() => isMobile && setMobileMenuOpen(false)}
+                      className={`w-full flex items-center rounded-lg font-medium text-sm transition-all ${
+                        showExpandedSidebar ? 'justify-start gap-3 px-3 py-2.5' : 'justify-center px-0 py-3'
+                      } ${
+                        isActive
+                          ? 'bg-secondary text-white'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5 shrink-0" />
+                      {showExpandedSidebar ? item.label : null}
+                    </Link>
+                  </TooltipTrigger>
+                  {isCollapsedDesktop && !isMobile ? (
+                    <TooltipContent side="right">{item.label}</TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
             )
           })}
         </div>
@@ -144,36 +168,57 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             const Icon = item.icon
             const isActive = pathname === item.href
             return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={() => isMobile && setMobileMenuOpen(false)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                  isActive
-                    ? 'bg-secondary text-white'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {item.label}
-              </Link>
+              <TooltipProvider key={item.id} delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      onClick={() => isMobile && setMobileMenuOpen(false)}
+                      className={`w-full flex items-center rounded-lg font-medium text-sm transition-all ${
+                        showExpandedSidebar ? 'justify-start gap-3 px-3 py-2.5' : 'justify-center px-0 py-3'
+                      } ${
+                        isActive
+                          ? 'bg-secondary text-white'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5 shrink-0" />
+                      {showExpandedSidebar ? item.label : null}
+                    </Link>
+                  </TooltipTrigger>
+                  {isCollapsedDesktop && !isMobile ? (
+                    <TooltipContent side="right">{item.label}</TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
             )
           })}
         </div>
       </div>
 
       {/* Sign Out */}
-      <div className="p-4 border-t border-gray-100">
+      <div className={`border-t border-gray-100 ${showExpandedSidebar ? 'p-4' : 'p-3'}`}>
         <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-start text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-gray-900 bg-transparent"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </AlertDialogTrigger>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-gray-900 bg-transparent ${
+                      showExpandedSidebar ? 'w-full justify-start' : 'w-full justify-center px-0'
+                    }`}
+                  >
+                    <LogOut className={`w-4 h-4 ${showExpandedSidebar ? 'mr-2' : ''}`} />
+                    {showExpandedSidebar ? 'Sign Out' : null}
+                  </Button>
+                </AlertDialogTrigger>
+              </TooltipTrigger>
+              {isCollapsedDesktop && !isMobile ? (
+                <TooltipContent side="right">Sign Out</TooltipContent>
+              ) : null}
+            </Tooltip>
+          </TooltipProvider>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Log out?</AlertDialogTitle>
@@ -189,7 +234,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </AlertDialog>
       </div>
     </div>
-  )
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -210,7 +256,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </Sheet>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen lg:max-w-[calc(100%-16rem)]">
+      <div
+        className={`flex-1 flex flex-col min-h-screen ${
+          sidebarOpen ? 'lg:max-w-[calc(100%-16rem)]' : 'lg:max-w-[calc(100%-5rem)]'
+        }`}
+      >
         {/* Top Navigation */}
         <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
           <div className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6">

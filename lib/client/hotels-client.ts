@@ -42,3 +42,10 @@ export function listHotelBookingsRequest(scope: 'mine' | 'admin') {
 export function updateHotelBookingStatusRequest(id: string, status: HotelBookingRecord['status']) {
   return apiRequest<{ booking: HotelBookingRecord }>(`/api/hotel-bookings/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
 }
+
+export function submitHotelBookingReceiptRequest(id: string, receiptUrl: string) {
+  return apiRequest<{ booking: HotelBookingRecord }>(`/api/hotel-bookings/${id}/receipt`, {
+    method: 'PATCH',
+    body: JSON.stringify({ receiptUrl }),
+  })
+}

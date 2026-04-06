@@ -48,6 +48,9 @@ const HOTEL_COLUMNS = [
   { name: 'contact_phone', sql: `ALTER TABLE hotels ADD COLUMN contact_phone TEXT NOT NULL DEFAULT ''` },
   { name: 'contact_email', sql: `ALTER TABLE hotels ADD COLUMN contact_email TEXT NOT NULL DEFAULT ''` },
   { name: 'contact_address', sql: `ALTER TABLE hotels ADD COLUMN contact_address TEXT NOT NULL DEFAULT ''` },
+  { name: 'bank_name', sql: `ALTER TABLE hotels ADD COLUMN bank_name TEXT NOT NULL DEFAULT ''` },
+  { name: 'bank_account_name', sql: `ALTER TABLE hotels ADD COLUMN bank_account_name TEXT NOT NULL DEFAULT ''` },
+  { name: 'bank_account_number', sql: `ALTER TABLE hotels ADD COLUMN bank_account_number TEXT NOT NULL DEFAULT ''` },
   { name: 'approval_status', sql: `ALTER TABLE hotels ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'pending_review'` },
   { name: 'status', sql: `ALTER TABLE hotels ADD COLUMN status TEXT NOT NULL DEFAULT 'active'` },
   { name: 'featured', sql: `ALTER TABLE hotels ADD COLUMN featured INTEGER NOT NULL DEFAULT 0` },
@@ -90,6 +93,9 @@ const HOTEL_BOOKING_COLUMNS = [
   { name: 'check_out_date', sql: `ALTER TABLE hotel_bookings ADD COLUMN check_out_date TEXT NOT NULL DEFAULT ''` },
   { name: 'departure_time', sql: `ALTER TABLE hotel_bookings ADD COLUMN departure_time TEXT` },
   { name: 'status', sql: `ALTER TABLE hotel_bookings ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'` },
+  { name: 'payment_status', sql: `ALTER TABLE hotel_bookings ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'unpaid'` },
+  { name: 'payment_receipt_url', sql: `ALTER TABLE hotel_bookings ADD COLUMN payment_receipt_url TEXT` },
+  { name: 'payment_submitted_at', sql: `ALTER TABLE hotel_bookings ADD COLUMN payment_submitted_at TEXT` },
   { name: 'created_by_user_id', sql: `ALTER TABLE hotel_bookings ADD COLUMN created_by_user_id TEXT` },
   { name: 'created_at', sql: `ALTER TABLE hotel_bookings ADD COLUMN created_at TEXT` },
   { name: 'updated_at', sql: `ALTER TABLE hotel_bookings ADD COLUMN updated_at TEXT` },
@@ -150,6 +156,37 @@ const PROPERTY_COLUMNS = [
   { name: 'rejection_reason', sql: `ALTER TABLE properties ADD COLUMN rejection_reason TEXT` },
   { name: 'created_at', sql: `ALTER TABLE properties ADD COLUMN created_at TEXT` },
   { name: 'updated_at', sql: `ALTER TABLE properties ADD COLUMN updated_at TEXT` },
+] as const
+
+const PROPERTY_VERIFICATION_REQUEST_COLUMNS = [
+  { name: 'id', sql: `ALTER TABLE property_verification_requests ADD COLUMN id TEXT` },
+  { name: 'tracking_code', sql: `ALTER TABLE property_verification_requests ADD COLUMN tracking_code TEXT NOT NULL DEFAULT ''` },
+  { name: 'property_id', sql: `ALTER TABLE property_verification_requests ADD COLUMN property_id TEXT` },
+  { name: 'property_title', sql: `ALTER TABLE property_verification_requests ADD COLUMN property_title TEXT NOT NULL DEFAULT ''` },
+  { name: 'property_location', sql: `ALTER TABLE property_verification_requests ADD COLUMN property_location TEXT NOT NULL DEFAULT ''` },
+  { name: 'property_address', sql: `ALTER TABLE property_verification_requests ADD COLUMN property_address TEXT NOT NULL DEFAULT ''` },
+  { name: 'requester_user_id', sql: `ALTER TABLE property_verification_requests ADD COLUMN requester_user_id TEXT` },
+  { name: 'requester_name', sql: `ALTER TABLE property_verification_requests ADD COLUMN requester_name TEXT NOT NULL DEFAULT ''` },
+  { name: 'requester_email', sql: `ALTER TABLE property_verification_requests ADD COLUMN requester_email TEXT NOT NULL DEFAULT ''` },
+  { name: 'requester_phone', sql: `ALTER TABLE property_verification_requests ADD COLUMN requester_phone TEXT NOT NULL DEFAULT ''` },
+  { name: 'state', sql: `ALTER TABLE property_verification_requests ADD COLUMN state TEXT NOT NULL DEFAULT ''` },
+  { name: 'area', sql: `ALTER TABLE property_verification_requests ADD COLUMN area TEXT NOT NULL DEFAULT ''` },
+  { name: 'goal', sql: `ALTER TABLE property_verification_requests ADD COLUMN goal TEXT` },
+  { name: 'package_id', sql: `ALTER TABLE property_verification_requests ADD COLUMN package_id TEXT NOT NULL DEFAULT 'basic'` },
+  { name: 'package_name', sql: `ALTER TABLE property_verification_requests ADD COLUMN package_name TEXT NOT NULL DEFAULT ''` },
+  { name: 'amount', sql: `ALTER TABLE property_verification_requests ADD COLUMN amount INTEGER NOT NULL DEFAULT 0` },
+  { name: 'payment_reference', sql: `ALTER TABLE property_verification_requests ADD COLUMN payment_reference TEXT NOT NULL DEFAULT ''` },
+  { name: 'payment_status', sql: `ALTER TABLE property_verification_requests ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'pending'` },
+  { name: 'verification_status', sql: `ALTER TABLE property_verification_requests ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'payment_pending'` },
+  { name: 'title_document_type', sql: `ALTER TABLE property_verification_requests ADD COLUMN title_document_type TEXT` },
+  { name: 'title_document_urls_json', sql: `ALTER TABLE property_verification_requests ADD COLUMN title_document_urls_json TEXT NOT NULL DEFAULT '[]'` },
+  { name: 'survey_plan_urls_json', sql: `ALTER TABLE property_verification_requests ADD COLUMN survey_plan_urls_json TEXT NOT NULL DEFAULT '[]'` },
+  { name: 'additional_document_urls_json', sql: `ALTER TABLE property_verification_requests ADD COLUMN additional_document_urls_json TEXT NOT NULL DEFAULT '[]'` },
+  { name: 'paystack_access_code', sql: `ALTER TABLE property_verification_requests ADD COLUMN paystack_access_code TEXT` },
+  { name: 'paystack_authorization_url', sql: `ALTER TABLE property_verification_requests ADD COLUMN paystack_authorization_url TEXT` },
+  { name: 'paid_at', sql: `ALTER TABLE property_verification_requests ADD COLUMN paid_at TEXT` },
+  { name: 'created_at', sql: `ALTER TABLE property_verification_requests ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { name: 'updated_at', sql: `ALTER TABLE property_verification_requests ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP` },
 ] as const
 
 async function ensureUsersTableSchema() {
@@ -341,6 +378,9 @@ async function ensureHotelsTableSchema() {
     SET
       images_json = COALESCE(NULLIF(images_json, ''), '[]'),
       amenities_json = COALESCE(NULLIF(amenities_json, ''), '[]'),
+      bank_name = COALESCE(bank_name, ''),
+      bank_account_name = COALESCE(bank_account_name, ''),
+      bank_account_number = COALESCE(bank_account_number, ''),
       approval_status = COALESCE(approval_status, 'pending_review'),
       status = COALESCE(status, 'active'),
       featured = COALESCE(featured, 0),
@@ -381,6 +421,7 @@ async function ensureHotelsTableSchema() {
     UPDATE hotel_bookings
     SET
       status = COALESCE(status, 'pending'),
+      payment_status = COALESCE(payment_status, 'unpaid'),
       guest_email = COALESCE(guest_email, ''),
       adults = COALESCE(adults, 1),
       children = COALESCE(children, 0),
@@ -615,6 +656,79 @@ async function ensureNotificationSchema() {
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_user_notifications_user_id ON user_notifications(user_id);`)
 }
 
+async function ensurePropertyVerificationRequestsSchema() {
+  const db = getDbClient()
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS property_verification_requests (
+      id TEXT PRIMARY KEY,
+      tracking_code TEXT NOT NULL UNIQUE,
+      property_id TEXT,
+      property_title TEXT NOT NULL,
+      property_location TEXT NOT NULL,
+      property_address TEXT NOT NULL,
+      requester_user_id TEXT,
+      requester_name TEXT NOT NULL,
+      requester_email TEXT NOT NULL,
+      requester_phone TEXT NOT NULL,
+      state TEXT NOT NULL,
+      area TEXT NOT NULL,
+      goal TEXT,
+      package_id TEXT NOT NULL CHECK (package_id IN ('basic', 'standard', 'premium')),
+      package_name TEXT NOT NULL,
+      amount INTEGER NOT NULL DEFAULT 0,
+      payment_reference TEXT NOT NULL UNIQUE,
+      payment_status TEXT NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed')),
+      verification_status TEXT NOT NULL DEFAULT 'payment_pending' CHECK (verification_status IN ('payment_pending', 'submitted', 'in_review', 'completed', 'cancelled')),
+      title_document_type TEXT,
+      title_document_urls_json TEXT NOT NULL DEFAULT '[]',
+      survey_plan_urls_json TEXT NOT NULL DEFAULT '[]',
+      additional_document_urls_json TEXT NOT NULL DEFAULT '[]',
+      paystack_access_code TEXT,
+      paystack_authorization_url TEXT,
+      paid_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  const info = await db.execute(`PRAGMA table_info(property_verification_requests)`)
+  const existingColumns = new Set(info.rows.map((row) => String(row.name)))
+  for (const column of PROPERTY_VERIFICATION_REQUEST_COLUMNS) {
+    if (!existingColumns.has(column.name)) {
+      await db.execute(column.sql)
+    }
+  }
+
+  await db.execute(`
+    UPDATE property_verification_requests
+    SET
+      tracking_code = COALESCE(tracking_code, ''),
+      property_title = COALESCE(property_title, ''),
+      property_location = COALESCE(property_location, ''),
+      property_address = COALESCE(property_address, ''),
+      requester_name = COALESCE(requester_name, ''),
+      requester_email = COALESCE(requester_email, ''),
+      requester_phone = COALESCE(requester_phone, ''),
+      state = COALESCE(state, ''),
+      area = COALESCE(area, ''),
+      package_id = COALESCE(package_id, 'basic'),
+      package_name = COALESCE(package_name, ''),
+      amount = COALESCE(amount, 0),
+      payment_reference = COALESCE(payment_reference, ''),
+      payment_status = COALESCE(payment_status, 'pending'),
+      verification_status = COALESCE(verification_status, 'payment_pending'),
+      title_document_urls_json = COALESCE(NULLIF(title_document_urls_json, ''), '[]'),
+      survey_plan_urls_json = COALESCE(NULLIF(survey_plan_urls_json, ''), '[]'),
+      additional_document_urls_json = COALESCE(NULLIF(additional_document_urls_json, ''), '[]'),
+      created_at = COALESCE(created_at, CURRENT_TIMESTAMP),
+      updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)
+  `)
+
+  await db.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_property_verification_requests_tracking_code ON property_verification_requests(tracking_code);`)
+  await db.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_property_verification_requests_payment_reference ON property_verification_requests(payment_reference);`)
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_property_verification_requests_email ON property_verification_requests(requester_email);`)
+}
+
 export async function initializeDatabase() {
   if (initialized) {
     return
@@ -705,6 +819,9 @@ export async function initializeDatabase() {
             contact_phone TEXT NOT NULL,
             contact_email TEXT NOT NULL,
             contact_address TEXT NOT NULL,
+            bank_name TEXT NOT NULL DEFAULT '',
+            bank_account_name TEXT NOT NULL DEFAULT '',
+            bank_account_number TEXT NOT NULL DEFAULT '',
             approval_status TEXT NOT NULL DEFAULT 'pending_review',
             status TEXT NOT NULL DEFAULT 'active',
             featured INTEGER NOT NULL DEFAULT 0,
@@ -749,6 +866,9 @@ export async function initializeDatabase() {
             check_out_date TEXT NOT NULL,
             departure_time TEXT,
             status TEXT NOT NULL DEFAULT 'pending',
+            payment_status TEXT NOT NULL DEFAULT 'unpaid',
+            payment_receipt_url TEXT,
+            payment_submitted_at TEXT,
             created_by_user_id TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -771,6 +891,38 @@ export async function initializeDatabase() {
             expires_at TEXT NOT NULL,
             consumed_at TEXT,
             attempts INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
+        `
+          CREATE TABLE IF NOT EXISTS property_verification_requests (
+            id TEXT PRIMARY KEY,
+            tracking_code TEXT NOT NULL UNIQUE,
+            property_id TEXT,
+            property_title TEXT NOT NULL,
+            property_location TEXT NOT NULL,
+            property_address TEXT NOT NULL,
+            requester_user_id TEXT,
+            requester_name TEXT NOT NULL,
+            requester_email TEXT NOT NULL,
+            requester_phone TEXT NOT NULL,
+            state TEXT NOT NULL,
+            area TEXT NOT NULL,
+            goal TEXT,
+            package_id TEXT NOT NULL CHECK (package_id IN ('basic', 'standard', 'premium')),
+            package_name TEXT NOT NULL,
+            amount INTEGER NOT NULL DEFAULT 0,
+            payment_reference TEXT NOT NULL UNIQUE,
+            payment_status TEXT NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed')),
+            verification_status TEXT NOT NULL DEFAULT 'payment_pending' CHECK (verification_status IN ('payment_pending', 'submitted', 'in_review', 'completed', 'cancelled')),
+            title_document_type TEXT,
+            title_document_urls_json TEXT NOT NULL DEFAULT '[]',
+            survey_plan_urls_json TEXT NOT NULL DEFAULT '[]',
+            additional_document_urls_json TEXT NOT NULL DEFAULT '[]',
+            paystack_access_code TEXT,
+            paystack_authorization_url TEXT,
+            paid_at TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
           );
@@ -843,6 +995,7 @@ export async function initializeDatabase() {
     await ensureSubscriptionSchema()
     await ensureNeighbourhoodSchema()
     await ensureNotificationSchema()
+    await ensurePropertyVerificationRequestsSchema()
 
     initialized = true
     await seedBlogsIfNeeded()

@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   title: 'Ulo - Premium Real Estate Platform',
   description: 'Discover your dream property with Ulo',
   generator: 'v0.app',
+  icons: {
+    icon: [
+      { url: '/brand/favicon-black.png', media: '(prefers-color-scheme: light)' },
+      { url: '/brand/favicon-white.png', media: '(prefers-color-scheme: dark)' },
+    ],
+    shortcut: '/brand/favicon-black.png',
+    apple: '/brand/favicon-black.png',
+  },
 }
 
 export default function RootLayout({

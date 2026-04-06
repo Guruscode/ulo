@@ -7,6 +7,7 @@ import HomeFooter from '@/components/home/home-footer'
 import HomeNav from '@/components/home/home-nav'
 import PropertyCard from '@/components/home/property-card'
 import { usePublicHomeProperties } from '@/components/properties/use-public-home-properties'
+import { PropertyGridSkeleton } from '@/components/ui/page-skeletons'
 import { homeEstates } from '@/lib/home-estates'
 import { DEFAULT_ESTATE_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
 
@@ -43,11 +44,11 @@ export default function EstatePage({ params }: { params: Promise<{ slug: string 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl md:text-4xl font-serif font-bold text-secondary">
-            {loading ? 'Loading...' : `${estateProperties.length} ${estateProperties.length === 1 ? 'Listing' : 'Listings'}`}
+            {loading ? <PropertyCountSkeleton /> : `${estateProperties.length} ${estateProperties.length === 1 ? 'Listing' : 'Listings'}`}
           </h2>
         </div>
         {loading ? (
-          <div className="text-center py-20 text-muted-foreground text-lg">Loading approved estate properties...</div>
+          <PropertyGridSkeleton />
         ) : estateProperties.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground text-lg">No approved properties are available in this estate yet.</div>
         ) : (
@@ -61,4 +62,8 @@ export default function EstatePage({ params }: { params: Promise<{ slug: string 
       <HomeFooter />
     </div>
   )
+}
+
+function PropertyCountSkeleton() {
+  return <span className="block h-10 w-36 animate-pulse rounded-md bg-muted" aria-hidden="true" />
 }

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -175,7 +176,11 @@ export function AccountProfileContent({
             <User className="h-10 w-10 text-white" />
           </div>
           <div>
-            <p className="text-lg font-semibold text-gray-900">{user?.name || 'Loading...'}</p>
+            {user?.name ? (
+              <p className="text-lg font-semibold text-gray-900">{user.name}</p>
+            ) : (
+              <Skeleton className="h-6 w-32" />
+            )}
             <p className="text-gray-500">{roleLabel} • {profile.accountType.replace('_', ' ')}</p>
           </div>
         </div>

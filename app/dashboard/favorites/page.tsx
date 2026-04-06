@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Heart, Loader2 } from 'lucide-react'
+import { Heart } from 'lucide-react'
 
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
 import PropertyCard from '@/components/home/property-card'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PropertyGridSkeleton } from '@/components/ui/page-skeletons'
 import { ApiClientError } from '@/lib/client/api-error'
 import { listSavedPropertiesRequest } from '@/lib/client/properties-client'
 import { toHomeProperty } from '@/lib/properties/presentation'
@@ -42,10 +43,7 @@ export default function DashboardFavoritesPage() {
         </div>
 
         {loading ? (
-          <Card className="bg-white p-12 text-center text-gray-500">
-            <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin" />
-            Loading saved properties...
-          </Card>
+          <PropertyGridSkeleton count={6} />
         ) : error ? (
           <Card className="bg-white p-12 text-center text-red-600">{error}</Card>
         ) : properties.length === 0 ? (

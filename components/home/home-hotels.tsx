@@ -5,6 +5,7 @@ import { Building2, MapPin, Star } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { HotelGridSkeleton } from '@/components/ui/page-skeletons'
 import { usePublicHotels } from '@/components/hotels/use-public-hotels'
 import { formatHotelPrice } from '@/lib/hotels/presentation'
 
@@ -30,7 +31,9 @@ export default function HomeHotels() {
         </div>
 
         {loading ? (
-          <Card className="mt-10 p-10 text-center text-muted-foreground">Loading approved hotels...</Card>
+          <div className="mt-10">
+            <HotelGridSkeleton count={3} />
+          </div>
         ) : hotelsToShow.length === 0 ? (
           <Card className="mt-10 p-10 text-center text-muted-foreground">No approved hotels available yet.</Card>
         ) : (

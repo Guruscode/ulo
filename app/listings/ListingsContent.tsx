@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { PropertyGridSkeleton } from '@/components/ui/page-skeletons'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { usePublicHomeProperties } from '@/components/properties/use-public-home-properties'
 import { cn } from '@/lib/utils'
@@ -117,7 +118,7 @@ export default function ListingsContent() {
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Find Your Property</h1>
             <p className="text-gray-600 text-lg mt-1">
-              {loading ? 'Loading approved properties...' : `${filteredProperties.length} properties found`}
+              {loading ? <ResultsCountSkeleton /> : `${filteredProperties.length} properties found`}
             </p>
           </div>
           {hasActiveFilters ? (
@@ -276,7 +277,7 @@ export default function ListingsContent() {
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
-          <div className="text-center py-20 text-gray-600">Loading approved properties...</div>
+          <PropertyGridSkeleton />
         ) : filteredProperties.length === 0 ? (
           <div className="text-center py-20">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">No properties found</h2>
@@ -323,4 +324,8 @@ export default function ListingsContent() {
       </section>
     </div>
   )
+}
+
+function ResultsCountSkeleton() {
+  return <span className="block h-7 w-48 animate-pulse rounded-md bg-muted" aria-hidden="true" />
 }
