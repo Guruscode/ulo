@@ -52,6 +52,34 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
   const [editUser, setEditUser] = useState<AuthUser | null>(null)
   const [saving, setSaving] = useState(false)
 
+  const submitUserUpdate = async (user: AuthUser, overrides?: Partial<AuthUser>) => {
+    setSaving(true)
+    setError('')
+    try {
+      const nextUser = { ...user, ...overrides }
+      const response = await updateAdminUserRequest(user.id, {
+        name: nextUser.name,
+        email: nextUser.email,
+        phone: nextUser.phone || null,
+        address: nextUser.address || null,
+        state: nextUser.state || null,
+        localGovernment: nextUser.localGovernment || null,
+        accountType: (nextUser.accountType || 'user') as AccountType,
+        approvalStatus: (nextUser.approvalStatus || 'pending') as ApprovalStatus,
+        identityType: nextUser.accountType === 'user' ? null : 'bvn',
+        identityNumber: nextUser.identityNumber || null,
+        isActive: nextUser.status !== 'disabled',
+      })
+      setUsers((current) => current.map((item) => (item.id === response.user.id ? response.user : item)))
+      setViewUser((current) => (current?.id === response.user.id ? response.user : current))
+      setEditUser(null)
+    } catch (error) {
+      setError(error instanceof ApiClientError ? error.message : 'Unable to save user.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const loadUsers = async () => {
     setLoading(true)
     setError('')
@@ -85,28 +113,7 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
 
   const saveUser = async () => {
     if (!editUser) return
-    setSaving(true)
-    try {
-      const response = await updateAdminUserRequest(editUser.id, {
-        name: editUser.name,
-        email: editUser.email,
-        phone: editUser.phone || null,
-        address: editUser.address || null,
-        state: editUser.state || null,
-        localGovernment: editUser.localGovernment || null,
-        accountType: (editUser.accountType || 'user') as AccountType,
-        approvalStatus: (editUser.approvalStatus || 'pending') as ApprovalStatus,
-        identityType: editUser.identityType || null,
-        identityNumber: editUser.identityNumber || null,
-        isActive: editUser.status !== 'disabled',
-      })
-      setUsers((current) => current.map((user) => (user.id === response.user.id ? response.user : user)))
-      setEditUser(null)
-    } catch (error) {
-      setError(error instanceof ApiClientError ? error.message : 'Unable to save user.')
-    } finally {
-      setSaving(false)
-    }
+    await submitUserUpdate(editUser)
   }
 
   return (
@@ -160,6 +167,20 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
                   <p className="text-sm text-slate-500">{user.address || 'No address'}{user.state ? `, ${user.state}` : ''}{user.localGovernment ? `, ${user.localGovernment}` : ''}</p>
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={saving || user.approvalStatus === 'approved'}
+                    onClick={() => void submitUserUpdate(user, { approvalStatus: 'approved' })}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={saving || user.approvalStatus === 'rejected'}
+                    onClick={() => void submitUserUpdate(user, { approvalStatus: 'rejected' })}
+                  >
+                    Reject
+                  </Button>
                   <Button variant="outline" onClick={() => setViewUser(user)}><Eye className="mr-2 h-4 w-4" />View</Button>
                   <Button variant="outline" onClick={() => setEditUser(user)}><Pencil className="mr-2 h-4 w-4" />Edit</Button>
                 </div>
@@ -200,8 +221,8 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
                 <div className="space-y-2"><Label>Phone</Label><Input value={editUser.phone || ''} onChange={(event) => setEditUser({ ...editUser, phone: event.target.value })} /></div>
                 <div className="space-y-2"><Label>Account Type</Label><Select value={editUser.accountType || 'user'} onValueChange={(value) => setEditUser({ ...editUser, accountType: value as AccountType })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="user">User</SelectItem><SelectItem value="agent">Agent</SelectItem><SelectItem value="landlord">Landlord</SelectItem><SelectItem value="hotel_manager">Hotel Manager</SelectItem></SelectContent></Select></div>
                 <div className="space-y-2"><Label>Approval</Label><Select value={editUser.approvalStatus || 'pending'} onValueChange={(value) => setEditUser({ ...editUser, approvalStatus: value as ApprovalStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="approved">Approved</SelectItem><SelectItem value="rejected">Rejected</SelectItem></SelectContent></Select></div>
-                <div className="space-y-2"><Label>Identity Type</Label><Select value={editUser.identityType || 'nin'} onValueChange={(value) => setEditUser({ ...editUser, identityType: value as 'nin' | 'bvn' })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="nin">NIN</SelectItem><SelectItem value="bvn">BVN</SelectItem></SelectContent></Select></div>
-                <div className="space-y-2 md:col-span-2"><Label>Identity Number</Label><Input value={editUser.identityNumber || ''} onChange={(event) => setEditUser({ ...editUser, identityNumber: event.target.value })} /></div>
+                <div className="space-y-2"><Label>Identity Type</Label><Input value={editUser.accountType === 'user' ? 'N/A' : 'BVN'} disabled /></div>
+                <div className="space-y-2 md:col-span-2"><Label>Identity Number</Label><Input value={editUser.identityNumber || ''} onChange={(event) => setEditUser({ ...editUser, identityNumber: event.target.value })} disabled={editUser.accountType === 'user'} /></div>
                 <div className="space-y-2 md:col-span-2"><Label>Address</Label><Input value={editUser.address || ''} onChange={(event) => setEditUser({ ...editUser, address: event.target.value })} /></div>
                 <div className="space-y-2"><Label>State</Label><Input value={editUser.state || ''} onChange={(event) => setEditUser({ ...editUser, state: event.target.value })} /></div>
                 <div className="space-y-2"><Label>Local Government</Label><Input value={editUser.localGovernment || ''} onChange={(event) => setEditUser({ ...editUser, localGovernment: event.target.value })} /></div>

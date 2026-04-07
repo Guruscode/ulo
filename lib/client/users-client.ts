@@ -23,7 +23,7 @@ export function updateAdminUserRequest(id: string, input: {
   localGovernment?: string | null
   accountType: 'user' | 'agent' | 'landlord' | 'hotel_manager'
   approvalStatus: 'pending' | 'approved' | 'rejected'
-  identityType?: 'nin' | 'bvn' | null
+  identityType?: 'bvn' | null
   identityNumber?: string | null
   isActive: boolean
 }) {

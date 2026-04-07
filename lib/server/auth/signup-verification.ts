@@ -33,7 +33,7 @@ function mapRecord(row: Record<string, unknown>): SignupVerificationRecord {
     state: row.state ? String(row.state) : null,
     localGovernment: row.local_government ? String(row.local_government) : null,
     accountType: row.account_type as AccountType,
-    identityType: row.identity_type ? (String(row.identity_type) as IdentityType) : null,
+    identityType: row.identity_type === 'bvn' ? 'bvn' : null,
     identityNumber: row.identity_number ? String(row.identity_number) : null,
     passwordHash: String(row.password_hash),
     otpHash: String(row.otp_hash),
@@ -137,6 +137,19 @@ export async function consumeSignupVerification(id: string) {
       WHERE id = ?
     `,
     args: [id],
+  })
+}
+
+export async function refreshSignupVerification(id: string, otpHash: string, expiresAt: string) {
+  await initializeDatabase()
+  const db = getDbClient()
+  await db.execute({
+    sql: `
+      UPDATE signup_verifications
+      SET otp_hash = ?, expires_at = ?, attempts = 0, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+    args: [otpHash, expiresAt, id],
   })
 }
 

@@ -10,16 +10,9 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { ApiClientError } from '@/lib/client/api-error'
 import { accountRequest, updateAccountRequest, updatePasswordRequest } from '@/lib/client/account-client'
-import type { AccountType, IdentityType } from '@/lib/auth/types'
+import type { AccountType } from '@/lib/auth/types'
 
 type ProfileForm = {
   name: string
@@ -29,7 +22,7 @@ type ProfileForm = {
   state: string
   localGovernment: string
   accountType: AccountType
-  identityType: IdentityType | ''
+  identityType: 'bvn' | ''
   identityNumber: string
   timezone: string
 }
@@ -259,18 +252,7 @@ export function AccountProfileContent({
             <>
               <div className="space-y-2">
                 <Label htmlFor="profile-identity-type">Identity Type</Label>
-                <Select
-                  value={profile.identityType || 'nin'}
-                  onValueChange={(value) => setProfile({ ...profile, identityType: value as IdentityType })}
-                >
-                  <SelectTrigger id="profile-identity-type">
-                    <SelectValue placeholder="Select identity type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="nin">NIN</SelectItem>
-                    <SelectItem value="bvn">BVN</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input id="profile-identity-type" value="BVN" disabled />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="profile-identity-number">Identity Number</Label>

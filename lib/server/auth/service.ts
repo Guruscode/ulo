@@ -22,6 +22,7 @@ import {
   generateOtp,
   hashOtp,
   incrementSignupVerificationAttempts,
+  refreshSignupVerification,
 } from '@/lib/server/auth/signup-verification'
 import { createSessionToken, verifySessionToken } from '@/lib/server/auth/session'
 import { getServerEnv } from '@/lib/server/config/env'
@@ -35,7 +36,7 @@ const registerSchema = z.object({
   state: z.string().trim().min(2, 'State is required.'),
   localGovernment: z.string().trim().min(2, 'Local government is required.'),
   accountType: z.enum(['user', 'agent', 'landlord', 'hotel_manager']),
-  identityType: z.enum(['nin', 'bvn']).optional().nullable(),
+  identityType: z.enum(['bvn']).optional().nullable(),
   identityNumber: z.string().trim().optional().nullable(),
   password: z
     .string()
@@ -46,9 +47,6 @@ const registerSchema = z.object({
   agreeToTerms: z.boolean().refine(Boolean, 'You must agree to the terms.'),
 }).superRefine((data, ctx) => {
   if (data.accountType !== 'user') {
-    if (!data.identityType) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['identityType'], message: 'Identity type is required.' })
-    }
     if (!data.identityNumber?.trim()) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['identityNumber'], message: 'Identity number is required.' })
     }
@@ -68,7 +66,7 @@ const profileSchema = z.object({
   address: z.string().trim().optional().or(z.literal('')),
   state: z.string().trim().optional().or(z.literal('')),
   localGovernment: z.string().trim().optional().or(z.literal('')),
-  identityType: z.enum(['nin', 'bvn']).optional().nullable(),
+  identityType: z.enum(['bvn']).optional().nullable(),
   identityNumber: z.string().trim().optional().nullable().or(z.literal('')),
   timezone: z.string().trim().min(1, 'Timezone is required.'),
   emailNotifications: z.boolean(),
@@ -171,7 +169,7 @@ export async function requestSignupOtp(input: unknown) {
     state,
     localGovernment,
     accountType,
-    identityType,
+    identityType: accountType === 'user' ? null : (identityType ?? 'bvn'),
     identityNumber,
     passwordHash,
     otpHash: hashOtp(otp),
@@ -251,6 +249,44 @@ export async function verifySignupOtp(input: unknown) {
   return {
     user: authUser,
     sessionToken,
+  }
+}
+
+export async function resendSignupOtp(input: unknown) {
+  await ensureAdminSeeded()
+
+  const parsed = z.object({
+    verificationToken: z.string().trim().min(1, 'Verification token is required.'),
+  }).safeParse(input)
+
+  if (!parsed.success) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Verification token is required.', parsed.error.flatten())
+  }
+
+  const verification = await findSignupVerificationById(parsed.data.verificationToken)
+  if (!verification) {
+    throw new ApiError(404, 'OTP_NOT_FOUND', 'Verification request not found. Start signup again.')
+  }
+
+  if (verification.consumedAt) {
+    throw new ApiError(400, 'OTP_ALREADY_USED', 'This verification request has already been completed.')
+  }
+
+  const existingUser = await findUserByEmail(verification.email)
+  if (existingUser) {
+    throw new ApiError(409, 'EMAIL_ALREADY_IN_USE', 'An account with this email already exists.')
+  }
+
+  const otp = generateOtp()
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+  await refreshSignupVerification(verification.id, hashOtp(otp), expiresAt)
+  await sendSignupOtpEmail({ email: verification.email, name: verification.name, otp })
+
+  return {
+    verificationToken: verification.id,
+    email: verification.email.toLowerCase(),
+    expiresInMinutes: 10,
   }
 }
 

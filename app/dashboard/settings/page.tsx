@@ -13,18 +13,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FileUpload } from '@/components/ui/file-upload'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { ApiClientError } from '@/lib/client/api-error'
 import { updateAccountRequest, updatePasswordRequest } from '@/lib/client/account-client'
 import { accountRequest } from '@/lib/client/account-client'
-import type { AccountType, IdentityType } from '@/lib/auth/types'
+import type { AccountType } from '@/lib/auth/types'
 
 type SettingsForm = {
   name: string
@@ -35,7 +28,7 @@ type SettingsForm = {
   state: string
   localGovernment: string
   accountType: AccountType
-  identityType: IdentityType | ''
+  identityType: 'bvn' | ''
   identityNumber: string
   timezone: string
   emailNotifications: boolean
@@ -253,15 +246,7 @@ export default function DashboardSettingsPage() {
               <>
                 <div className="space-y-2">
                   <Label htmlFor="identityType">Identity Type</Label>
-                  <Select value={settings.identityType || 'nin'} onValueChange={(value) => setSettings({ ...settings, identityType: value as IdentityType })}>
-                    <SelectTrigger id="identityType" className="h-11">
-                      <SelectValue placeholder="Select identity type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="nin">NIN</SelectItem>
-                      <SelectItem value="bvn">BVN</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input id="identityType" value="BVN" className="h-11" disabled />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="identityNumber">Identity Number</Label>

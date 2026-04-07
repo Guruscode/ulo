@@ -13,7 +13,7 @@ const adminUserUpdateSchema = z.object({
   localGovernment: z.string().trim().optional().nullable(),
   accountType: z.enum(['user', 'agent', 'landlord', 'hotel_manager']),
   approvalStatus: z.enum(['pending', 'approved', 'rejected']),
-  identityType: z.enum(['nin', 'bvn']).optional().nullable(),
+  identityType: z.enum(['bvn']).optional().nullable(),
   identityNumber: z.string().trim().optional().nullable(),
   isActive: z.boolean(),
 }).superRefine((data, ctx) => {

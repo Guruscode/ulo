@@ -23,7 +23,7 @@ import { toast } from 'sonner'
 
 import { useAuth } from '@/components/providers/auth-provider'
 import { ApiClientError } from '@/lib/client/api-error'
-import { signupRequest, verifySignupOtpRequest } from '@/lib/client/auth-client'
+import { resendSignupOtpRequest, signupRequest, verifySignupOtpRequest } from '@/lib/client/auth-client'
 import { CITIES_BY_STATE, STATES, type State } from '@/lib/properties/nigeria-locations'
 
 export default function SignupPageClient() {
@@ -40,7 +40,6 @@ export default function SignupPageClient() {
     state: '',
     localGovernment: '',
     accountType: 'user',
-    identityType: 'nin',
     identityNumber: '',
     password: '',
     confirmPassword: '',
@@ -49,6 +48,7 @@ export default function SignupPageClient() {
   const [verificationToken, setVerificationToken] = useState('')
   const [otp, setOtp] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isResendingOtp, setIsResendingOtp] = useState(false)
   const [error, setError] = useState('')
   const availableCities = formData.state
     ? CITIES_BY_STATE[formData.state as State] ?? []
@@ -104,10 +104,7 @@ export default function SignupPageClient() {
         state: formData.state,
         localGovernment: formData.localGovernment,
         accountType: formData.accountType as 'user' | 'agent' | 'landlord' | 'hotel_manager',
-        identityType:
-          formData.accountType === 'user'
-            ? null
-            : (formData.identityType as 'nin' | 'bvn'),
+        identityType: formData.accountType === 'user' ? null : 'bvn',
         identityNumber: formData.accountType === 'user' ? null : formData.identityNumber,
         password: formData.password,
         agreeToTerms: formData.agreeToTerms,
@@ -122,6 +119,30 @@ export default function SignupPageClient() {
       toast.error(message)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleResendOtp = async () => {
+    if (!verificationToken) {
+      setError('Start signup again to request a new verification code.')
+      return
+    }
+
+    setError('')
+    setIsResendingOtp(true)
+
+    try {
+      const response = await resendSignupOtpRequest({ verificationToken })
+      setVerificationToken(response.verificationToken)
+      setOtp('')
+      toast.success(`A new verification code was sent to ${response.email}.`)
+    } catch (err) {
+      const message =
+        err instanceof ApiClientError ? err.message : 'Unable to resend your verification code right now.'
+      setError(message)
+      toast.error(message)
+    } finally {
+      setIsResendingOtp(false)
     }
   }
 
@@ -286,23 +307,9 @@ export default function SignupPageClient() {
                 </div>
 
                 {formData.accountType !== 'user' ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Means of Identity</label>
-                      <select
-                        name="identityType"
-                        value={formData.identityType}
-                        onChange={handleInputChange}
-                        className="h-11 w-full rounded-md border border-gray-200 bg-gray-50 px-3 text-sm focus:bg-white"
-                      >
-                        <option value="nin">NIN</option>
-                        <option value="bvn">BVN</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Identity Number</label>
-                      <Input type="text" name="identityNumber" placeholder="Enter identity number" value={formData.identityNumber} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">BVN Number</label>
+                    <Input type="text" name="identityNumber" placeholder="Enter BVN number" value={formData.identityNumber} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
                   </div>
                 ) : null}
 
@@ -368,6 +375,16 @@ export default function SignupPageClient() {
 
                 <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white font-medium text-base rounded-lg">
                   {isLoading ? 'Verifying...' : 'Verify and Create Account'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 rounded-lg"
+                  onClick={() => void handleResendOtp()}
+                  disabled={isResendingOtp || isLoading}
+                >
+                  {isResendingOtp ? 'Resending code...' : 'Resend OTP'}
                 </Button>
 
                 <Button

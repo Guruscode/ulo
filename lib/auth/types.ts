@@ -1,6 +1,6 @@
 export type UserRole = 'user' | 'admin'
 export type AccountType = 'user' | 'agent' | 'landlord' | 'hotel_manager'
-export type IdentityType = 'nin' | 'bvn'
+export type IdentityType = 'bvn'
 export type AccountStatus = 'active' | 'disabled'
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
 

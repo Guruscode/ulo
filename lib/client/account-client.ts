@@ -15,7 +15,7 @@ export function updateAccountRequest(input: {
   address?: string | null
   state?: string | null
   localGovernment?: string | null
-  identityType?: 'nin' | 'bvn' | null
+  identityType?: 'bvn' | null
   identityNumber?: string | null
   timezone: string
   emailNotifications: boolean

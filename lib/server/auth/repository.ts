@@ -10,6 +10,10 @@ export interface UserRecord extends AuthUser {
   lastLoginAt?: string | null
 }
 
+function normalizeIdentityType(value: unknown): IdentityType | null {
+  return value === 'bvn' ? 'bvn' : null
+}
+
 function mapUserRow(row: ResultSet['rows'][number]): UserRecord {
   return {
     id: String(row.id),
@@ -24,7 +28,7 @@ function mapUserRow(row: ResultSet['rows'][number]): UserRecord {
     address: row.address ? String(row.address) : null,
     state: row.state ? String(row.state) : null,
     localGovernment: row.local_government ? String(row.local_government) : null,
-    identityType: row.identity_type ? (String(row.identity_type) as IdentityType) : null,
+    identityType: normalizeIdentityType(row.identity_type),
     identityNumber: row.identity_number ? String(row.identity_number) : null,
     timezone: row.timezone ? String(row.timezone) : null,
     emailNotifications: Number(row.email_notifications) === 1,

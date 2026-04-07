@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
@@ -16,12 +17,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft } from 'lucide-react'
+import { ApiClientError } from '@/lib/client/api-error'
+import {
+  getCurrentSubscriptionRequest,
+  initializeSubscriptionCheckoutRequest,
+  listSubscriptionPlansRequest,
+} from '@/lib/client/subscriptions-client'
+import type { SubscriptionPlanRecord, UserSubscriptionRecord } from '@/lib/subscriptions/types'
+import { ArrowLeft, Check, CreditCard, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
+
+function formatMoney(amount: number) {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+function limitLabel(value: number, label: string) {
+  if (value < 0) return `Unlimited ${label}`
+  return `${value} ${label}${value === 1 ? '' : 's'}`
+}
 
 export default function AddPropertyPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [plans, setPlans] = useState<SubscriptionPlanRecord[]>([])
+  const [currentPlan, setCurrentPlan] = useState<SubscriptionPlanRecord | null>(null)
+  const [currentSubscription, setCurrentSubscription] = useState<UserSubscriptionRecord | null>(null)
+  const [plansLoading, setPlansLoading] = useState(true)
+  const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -48,6 +75,43 @@ export default function AddPropertyPage() {
       ...prev,
       type: value,
     }))
+  }
+
+  React.useEffect(() => {
+    const loadSubscriptions = async () => {
+      setPlansLoading(true)
+      try {
+        const [plansResponse, currentResponse] = await Promise.all([
+          listSubscriptionPlansRequest(),
+          getCurrentSubscriptionRequest(),
+        ])
+        setPlans(plansResponse.plans)
+        setCurrentPlan(currentResponse.plan)
+        setCurrentSubscription(currentResponse.subscription)
+      } catch (error) {
+        toast.error(error instanceof ApiClientError ? error.message : 'Unable to load subscription plans.')
+      } finally {
+        setPlansLoading(false)
+      }
+    }
+
+    void loadSubscriptions()
+  }, [])
+
+  const startCheckout = async (plan: SubscriptionPlanRecord) => {
+    if (plan.isFree) {
+      toast.message('You are already covered by the free plan.')
+      return
+    }
+
+    setCheckoutPlanId(plan.id)
+    try {
+      const response = await initializeSubscriptionCheckoutRequest(plan.id)
+      window.location.href = response.authorizationUrl
+    } catch (error) {
+      toast.error(error instanceof ApiClientError ? error.message : 'Unable to start subscription checkout.')
+      setCheckoutPlanId(null)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -250,6 +314,96 @@ export default function AddPropertyPage() {
               </div>
 
               {/* Form Actions */}
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  Subscription Plans
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Your current tier controls how many listings you can publish from this account.
+                </p>
+
+                {plansLoading ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center text-gray-500">
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {currentPlan ? (
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Current tier</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <h3 className="text-lg font-semibold text-gray-900">{currentPlan.name}</h3>
+                              <Badge variant="outline">{currentSubscription?.status || 'active'}</Badge>
+                              {currentPlan.isFree ? <Badge variant="outline">Free</Badge> : null}
+                            </div>
+                            <p className="mt-2 text-sm text-gray-600">{currentPlan.description}</p>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <p>{limitLabel(currentPlan.propertyLimit, 'property listing')}</p>
+                            <p>{limitLabel(currentPlan.hotelLimit, 'hotel listing')}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="grid gap-4 lg:grid-cols-3">
+                      {plans.map((plan) => {
+                        const isCurrent = currentPlan?.id === plan.id
+                        const isBusy = checkoutPlanId === plan.id
+
+                        return (
+                          <div key={plan.id} className="rounded-xl border border-gray-200 bg-white p-5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+                                <p className="mt-1 text-sm text-gray-600">{plan.description}</p>
+                              </div>
+                              {plan.isFree ? <Badge variant="outline">Free</Badge> : null}
+                            </div>
+
+                            <div className="mt-4">
+                              <p className="text-2xl font-bold text-gray-900">
+                                {plan.isFree ? 'Free' : formatMoney(plan.priceAmount)}
+                              </p>
+                              {!plan.isFree ? (
+                                <p className="text-sm text-gray-500">per {plan.billingInterval}</p>
+                              ) : null}
+                            </div>
+
+                            <div className="mt-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                              <p>{limitLabel(plan.propertyLimit, 'property listing')}</p>
+                              <p>{limitLabel(plan.hotelLimit, 'hotel listing')}</p>
+                            </div>
+
+                            <div className="mt-4 space-y-2 text-sm text-gray-600">
+                              {plan.features.map((feature, index) => (
+                                <div key={`${plan.id}-${index}`} className="flex items-start gap-2">
+                                  <Check className="mt-0.5 h-4 w-4 text-emerald-600" />
+                                  <span>{feature}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <Button
+                              type="button"
+                              className="mt-5 w-full"
+                              variant={isCurrent ? 'outline' : 'default'}
+                              disabled={isCurrent || isBusy}
+                              onClick={() => void startCheckout(plan)}
+                            >
+                              {isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
+                              {isCurrent ? 'Current Tier' : plan.isFree ? 'Included' : 'Subscribe Here'}
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-4 pt-8 border-t border-gray-200">
                 <Link href="/dashboard" className="flex-1">
                   <Button
