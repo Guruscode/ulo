@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   ArrowLeft,
@@ -72,6 +72,14 @@ const TITLE_DOCUMENT_TYPES = [
 ]
 
 export default function VerifyPropertyPage() {
+  return (
+    <Suspense fallback={<VerifyPropertyFallback />}>
+      <VerifyPropertyContent />
+    </Suspense>
+  )
+}
+
+function VerifyPropertyContent() {
   const searchParams = useSearchParams()
   const [trackOpen, setTrackOpen] = useState(false)
   const [packagesOpen, setPackagesOpen] = useState(false)
@@ -685,4 +693,22 @@ function formatStatus(value: string) {
 function extractFileName(value: string) {
   const segments = value.split('/')
   return segments[segments.length - 1] || value
+}
+
+function VerifyPropertyFallback() {
+  return (
+    <div className="min-h-screen bg-[#fcfcfb]">
+      <HomeNav />
+      <main className="px-4 pb-24 pt-28 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-slate-500" />
+            <h1 className="mt-6 text-4xl font-semibold text-slate-950">Verify Property Ownership</h1>
+            <p className="mt-4 text-lg leading-8 text-slate-600">Loading verification options...</p>
+          </div>
+        </div>
+      </main>
+      <HomeFooter />
+    </div>
+  )
 }

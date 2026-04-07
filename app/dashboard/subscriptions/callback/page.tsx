@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -13,6 +13,14 @@ import { ApiClientError } from '@/lib/client/api-error'
 import { verifySubscriptionRequest } from '@/lib/client/subscriptions-client'
 
 export default function SubscriptionCallbackPage() {
+  return (
+    <Suspense fallback={<SubscriptionCallbackFallback />}>
+      <SubscriptionCallbackContent />
+    </Suspense>
+  )
+}
+
+function SubscriptionCallbackContent() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('Verifying your Paystack payment...')
@@ -60,6 +68,20 @@ export default function SubscriptionCallbackPage() {
               <Link href="/dashboard/properties">Go to properties</Link>
             </Button>
           </div>
+        </Card>
+      </div>
+    </DashboardLayout>
+  )
+}
+
+function SubscriptionCallbackFallback() {
+  return (
+    <DashboardLayout>
+      <div className="mx-auto max-w-2xl py-8">
+        <Card className="p-8 text-center">
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-slate-500" />
+          <h1 className="mt-4 text-2xl font-semibold text-slate-900">Subscription Verification</h1>
+          <p className="mt-2 text-slate-600">Preparing payment verification...</p>
         </Card>
       </div>
     </DashboardLayout>

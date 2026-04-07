@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, Loader2, Search, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -14,6 +14,14 @@ import { ApiClientError } from '@/lib/client/api-error'
 import { verifyPropertyVerificationPaymentRequest } from '@/lib/client/property-verification-client'
 
 export default function VerifyPropertyCallbackPage() {
+  return (
+    <Suspense fallback={<VerifyPropertyCallbackFallback />}>
+      <VerifyPropertyCallbackContent />
+    </Suspense>
+  )
+}
+
+function VerifyPropertyCallbackContent() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('Verifying your payment...')
@@ -91,6 +99,24 @@ export default function VerifyPropertyCallbackPage() {
                 <Link href="/listings">Back to listings</Link>
               </Button>
             </div>
+          </Card>
+        </div>
+      </main>
+      <HomeFooter />
+    </div>
+  )
+}
+
+function VerifyPropertyCallbackFallback() {
+  return (
+    <div className="min-h-screen bg-[#fcfcfb]">
+      <HomeNav />
+      <main className="px-4 pb-24 pt-28 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl">
+          <Card className="rounded-[32px] border border-slate-200 p-10 text-center shadow-sm">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-slate-500" />
+            <h1 className="mt-6 text-4xl font-semibold text-slate-950">Property Verification</h1>
+            <p className="mt-4 text-lg leading-8 text-slate-600">Preparing payment verification...</p>
           </Card>
         </div>
       </main>
