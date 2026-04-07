@@ -27,12 +27,7 @@ export default function DashboardPage() {
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Welcome back, {firstName}! 👋</h1>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">Your live property and hotel data is shown below.</p>
         </div>
-
-        <motion.div variants={fadeInUp} initial="initial" animate="animate">
-          <LiveDashboardStats />
-        </motion.div>
-
-        <motion.div variants={fadeInUp} initial="initial" animate="animate">
+            <motion.div variants={fadeInUp} initial="initial" animate="animate">
           <Card className="bg-white p-4 sm:p-6">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -57,6 +52,12 @@ export default function DashboardPage() {
             </div>
           </Card>
         </motion.div>
+
+        <motion.div variants={fadeInUp} initial="initial" animate="animate">
+          <LiveDashboardStats />
+        </motion.div>
+
+    
 
         {/* <motion.div variants={fadeInUp} initial="initial" animate="animate">
           <Card className="bg-white p-4 sm:p-6">

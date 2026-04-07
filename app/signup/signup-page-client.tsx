@@ -10,12 +10,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useAuth } from '@/components/providers/auth-provider'
 import { ApiClientError } from '@/lib/client/api-error'
 import { signupRequest, verifySignupOtpRequest } from '@/lib/client/auth-client'
+import { CITIES_BY_STATE, STATES, type State } from '@/lib/properties/nigeria-locations'
 
 export default function SignupPageClient() {
   const router = useRouter()
@@ -41,6 +50,9 @@ export default function SignupPageClient() {
   const [otp, setOtp] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const availableCities = formData.state
+    ? CITIES_BY_STATE[formData.state as State] ?? []
+    : []
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.currentTarget
@@ -49,6 +61,21 @@ export default function SignupPageClient() {
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
+    }))
+  }
+
+  const handleStateChange = (state: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      state,
+      localGovernment: '',
+    }))
+  }
+
+  const handleCityChange = (localGovernment: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      localGovernment,
     }))
   }
 
@@ -199,12 +226,41 @@ export default function SignupPageClient() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                    <Input type="text" name="state" placeholder="Lagos" value={formData.state} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                    <Label className="block text-sm font-medium text-gray-700 mb-2">State</Label>
+                    <Select value={formData.state} onValueChange={handleStateChange} required>
+                      <SelectTrigger className="h-11 bg-gray-50 border-gray-200 focus:bg-white">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATES.map((state) => (
+                          <SelectItem key={state} value={state}>
+                            {state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Local Government</label>
-                    <Input type="text" name="localGovernment" placeholder="Ikeja" value={formData.localGovernment} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                    <Label className="block text-sm font-medium text-gray-700 mb-2">City</Label>
+                    <Select
+                      value={formData.localGovernment}
+                      onValueChange={handleCityChange}
+                      disabled={!formData.state}
+                      required
+                    >
+                      <SelectTrigger className="h-11 bg-gray-50 border-gray-200 focus:bg-white">
+                        <SelectValue
+                          placeholder={formData.state ? 'Select city' : 'Select state first'}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableCities.map((city) => (
+                          <SelectItem key={city} value={city}>
+                            {city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
