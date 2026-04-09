@@ -78,13 +78,13 @@ export default function HelpPage() {
     {
       icon: Mail,
       title: 'Email',
-      description: 'support@uloproperty.com',
+      description: 'theuloreal@gmail.com',
       action: 'Send Email',
     },
     {
       icon: Phone,
       title: 'Phone',
-      description: '+234 700 000 0000',
+      description: '+234 9161921437',
       action: 'Call Now',
     },
     {
@@ -175,70 +175,8 @@ export default function HelpPage() {
         )}
       </section>
 
-      {/* Contact Form */}
-      <section className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-lg border border-gray-100 p-8 md:p-10">
-          <h2 className="text-2xl md:text-3xl font-serif font-bold text-secondary mb-8">Still Have Questions?</h2>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Your name"
-                required
-              />
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="your@email.com"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <Input
-                  id="subject"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  placeholder="How can we help?"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="message">Message</Label>
-              <Textarea
-                id="message"
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                placeholder="Please describe your issue or question..."
-                rows={5}
-                required
-              />
-            </div>
-
-            <Button type="submit" className="bg-secondary hover:bg-secondary/90 text-white w-full">
-              Send Message
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </form>
-        </div>
-      </section>
+  
 
       <HomeFooter />
     </div>
