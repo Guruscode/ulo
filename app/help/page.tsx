@@ -78,7 +78,7 @@ export default function HelpPage() {
     {
       icon: Mail,
       title: 'Email',
-      description: 'theuloreal@gmail.com',
+      description: 'support@theulo.com',
       action: 'Send Email',
     },
     {
