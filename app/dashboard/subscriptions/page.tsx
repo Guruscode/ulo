@@ -94,17 +94,29 @@ export default function DashboardSubscriptionsPage() {
       return
     }
 
-    if (paymentMethod === 'account') {
-      toast.message('Use the account details below and contact admin after payment confirmation.')
-      return
-    }
-
     setCheckoutPlanId(plan.id)
     try {
       const response = await initializeSubscriptionCheckoutRequest(plan.id)
-      window.location.href = response.authorizationUrl
+      if (response.paymentProvider === 'manual' && response.whatsappUrl) {
+        toast.success('Pending subscription created. Send your receipt on WhatsApp for admin approval.')
+        window.location.href = response.whatsappUrl
+        return
+      }
+
+      if (response.authorizationUrl) {
+        window.location.href = response.authorizationUrl
+        return
+      }
+
+      toast.error('Unable to continue with subscription payment.')
     } catch (error) {
-      toast.error(error instanceof ApiClientError ? error.message : 'Unable to start Paystack checkout.')
+      toast.error(
+        error instanceof ApiClientError
+          ? error.message
+          : paymentMethod === 'account'
+            ? 'Unable to create pending manual subscription.'
+            : 'Unable to start Paystack checkout.'
+      )
       setCheckoutPlanId(null)
     }
   }
@@ -246,6 +258,9 @@ export default function DashboardSubscriptionsPage() {
                         </Button>
                       </div>
                     </div>
+                  </div>
+                  <div className="mt-4 rounded-xl border border-dashed bg-white p-4 text-sm text-slate-600">
+                    After payment, click your plan button. A pending subscription will be created and WhatsApp will open so you can send your receipt to admin.
                   </div>
                 </div>
               ) : (

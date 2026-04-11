@@ -107,7 +107,17 @@ export default function AddPropertyPage() {
     setCheckoutPlanId(plan.id)
     try {
       const response = await initializeSubscriptionCheckoutRequest(plan.id)
-      window.location.href = response.authorizationUrl
+      if (response.authorizationUrl) {
+        window.location.href = response.authorizationUrl
+        return
+      }
+
+      if (response.whatsappUrl) {
+        window.location.href = response.whatsappUrl
+        return
+      }
+
+      toast.error('Unable to continue with subscription checkout.')
     } catch (error) {
       toast.error(error instanceof ApiClientError ? error.message : 'Unable to start subscription checkout.')
       setCheckoutPlanId(null)

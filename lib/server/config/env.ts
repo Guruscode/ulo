@@ -22,6 +22,7 @@ type OptionalServerEnv = {
   subscriptionBankName?: string
   subscriptionAccountName?: string
   subscriptionAccountNumber?: string
+  subscriptionWhatsappNumber?: string
 }
 
 export type ServerEnv = RequiredServerEnv & OptionalServerEnv
@@ -64,6 +65,7 @@ export function getServerEnv(): ServerEnv {
     subscriptionBankName: process.env.SUBSCRIPTION_BANK_NAME,
     subscriptionAccountName: process.env.SUBSCRIPTION_ACCOUNT_NAME,
     subscriptionAccountNumber: process.env.SUBSCRIPTION_ACCOUNT_NUMBER,
+    subscriptionWhatsappNumber: process.env.SUBSCRIPTION_WHATSAPP_NUMBER,
   }
 
   return cachedEnv

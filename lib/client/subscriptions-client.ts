@@ -51,18 +51,38 @@ export function getCurrentSubscriptionRequest() {
 }
 
 export function getAdminSubscriptionSettingsRequest() {
-  return apiRequest<{ method: SubscriptionPaymentMethod }>('/api/admin/subscriptions/settings', { method: 'GET' })
+  return apiRequest<{
+    method: SubscriptionPaymentMethod
+    bankName: string
+    accountName: string
+    accountNumber: string
+  }>('/api/admin/subscriptions/settings', { method: 'GET' })
 }
 
-export function updateAdminSubscriptionSettingsRequest(method: SubscriptionPaymentMethod) {
-  return apiRequest<{ method: SubscriptionPaymentMethod }>('/api/admin/subscriptions/settings', {
+export function updateAdminSubscriptionSettingsRequest(input: {
+  method: SubscriptionPaymentMethod
+  bankName: string
+  accountName: string
+  accountNumber: string
+}) {
+  return apiRequest<{
+    method: SubscriptionPaymentMethod
+    bankName: string
+    accountName: string
+    accountNumber: string
+  }>('/api/admin/subscriptions/settings', {
     method: 'PATCH',
-    body: JSON.stringify({ method }),
+    body: JSON.stringify(input),
   })
 }
 
 export function initializeSubscriptionCheckoutRequest(planId: string) {
-  return apiRequest<{ authorizationUrl: string; reference: string }>('/api/subscriptions/checkout', {
+  return apiRequest<{
+    reference: string
+    authorizationUrl?: string
+    whatsappUrl?: string
+    paymentProvider: 'paystack' | 'manual'
+  }>('/api/subscriptions/checkout', {
     method: 'POST',
     body: JSON.stringify({ planId }),
   })

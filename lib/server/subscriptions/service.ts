@@ -32,6 +32,9 @@ function requireAdmin(actor: AuthUser) {
 }
 
 const SUBSCRIPTION_PAYMENT_METHOD_KEY = 'subscription_payment_method'
+const SUBSCRIPTION_BANK_NAME_KEY = 'subscription_bank_name'
+const SUBSCRIPTION_ACCOUNT_NAME_KEY = 'subscription_account_name'
+const SUBSCRIPTION_ACCOUNT_NUMBER_KEY = 'subscription_account_number'
 
 function subscriptionPlanSchema() {
   return z.object({
@@ -127,8 +130,17 @@ export async function getSubscriptionPaymentMethod(): Promise<SubscriptionPaymen
   return result.rows[0]?.value === 'account' ? 'account' : 'paystack'
 }
 
-export async function setSubscriptionPaymentMethodForAdmin(actor: AuthUser, method: SubscriptionPaymentMethod) {
-  requireAdmin(actor)
+async function getAppSetting(key: string) {
+  await initializeDatabase()
+  const db = getDbClient()
+  const result = await db.execute({
+    sql: `SELECT value FROM app_settings WHERE key = ? LIMIT 1`,
+    args: [key],
+  })
+  return result.rows[0]?.value ? String(result.rows[0].value) : null
+}
+
+async function setAppSetting(key: string, value: string) {
   await initializeDatabase()
   const db = getDbClient()
   await db.execute({
@@ -139,22 +151,70 @@ export async function setSubscriptionPaymentMethodForAdmin(actor: AuthUser, meth
         value = excluded.value,
         updated_at = CURRENT_TIMESTAMP
     `,
-    args: [SUBSCRIPTION_PAYMENT_METHOD_KEY, method],
+    args: [key, value],
   })
+}
+
+export async function setSubscriptionPaymentMethodForAdmin(actor: AuthUser, method: SubscriptionPaymentMethod) {
+  requireAdmin(actor)
+  await setAppSetting(SUBSCRIPTION_PAYMENT_METHOD_KEY, method)
 
   return { method }
+}
+
+export async function getSubscriptionSettings() {
+  const env = getServerEnv()
+  const [method, bankName, accountName, accountNumber] = await Promise.all([
+    getSubscriptionPaymentMethod(),
+    getAppSetting(SUBSCRIPTION_BANK_NAME_KEY),
+    getAppSetting(SUBSCRIPTION_ACCOUNT_NAME_KEY),
+    getAppSetting(SUBSCRIPTION_ACCOUNT_NUMBER_KEY),
+  ])
+
+  return {
+    method,
+    bankName: bankName || env.subscriptionBankName || 'Access Bank',
+    accountName: accountName || env.subscriptionAccountName || 'ULO TECHNOLOGIES',
+    accountNumber: accountNumber || env.subscriptionAccountNumber || '0012345678',
+  }
+}
+
+export async function updateSubscriptionSettingsForAdmin(
+  actor: AuthUser,
+  input: {
+    method: SubscriptionPaymentMethod
+    bankName: string
+    accountName: string
+    accountNumber: string
+  }
+) {
+  requireAdmin(actor)
+
+  await Promise.all([
+    setAppSetting(SUBSCRIPTION_PAYMENT_METHOD_KEY, input.method),
+    setAppSetting(SUBSCRIPTION_BANK_NAME_KEY, input.bankName),
+    setAppSetting(SUBSCRIPTION_ACCOUNT_NAME_KEY, input.accountName),
+    setAppSetting(SUBSCRIPTION_ACCOUNT_NUMBER_KEY, input.accountNumber),
+  ])
+
+  return getSubscriptionSettings()
 }
 
 function getAdminListingLimit(actor: AuthUser, type: 'property' | 'hotel') {
   return type === 'property' ? actor.propertyListingLimit : actor.hotelListingLimit
 }
 
-export async function initializeSubscriptionCheckout(actor: AuthUser, planId: string) {
-  const paymentMethod = await getSubscriptionPaymentMethod()
-  if (paymentMethod !== 'paystack') {
-    throw new ApiError(403, 'PAYMENT_METHOD_DISABLED', 'Paystack checkout is currently disabled by admin.')
-  }
+function buildWhatsappUrl(message: string) {
+  const env = getServerEnv()
+  const rawNumber = env.subscriptionWhatsappNumber?.replace(/\D/g, '') || ''
+  const encodedMessage = encodeURIComponent(message)
 
+  return rawNumber
+    ? `https://wa.me/${rawNumber}?text=${encodedMessage}`
+    : `https://wa.me/?text=${encodedMessage}`
+}
+
+export async function initializeSubscriptionCheckout(actor: AuthUser, planId: string) {
   const plan = await findSubscriptionPlanById(planId)
   if (!plan || !plan.isActive) {
     throw new ApiError(404, 'PLAN_NOT_FOUND', 'Subscription plan not found.')
@@ -162,6 +222,41 @@ export async function initializeSubscriptionCheckout(actor: AuthUser, planId: st
 
   if (plan.isFree) {
     throw new ApiError(400, 'FREE_PLAN_NO_CHECKOUT', 'The free plan does not require checkout.')
+  }
+
+  const paymentMethod = await getSubscriptionPaymentMethod()
+
+  if (paymentMethod === 'account') {
+    const reference = `ULO-MANUAL-SUB-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+    const pending = await createUserSubscription({
+      userId: actor.id,
+      planId: plan.id,
+      status: 'pending',
+      amount: plan.priceAmount,
+      currency: 'NGN',
+      billingInterval: plan.billingInterval,
+      paymentProvider: 'manual',
+      paymentReference: reference,
+    })
+
+    if (!pending) {
+      throw new ApiError(500, 'SUBSCRIPTION_INIT_FAILED', 'Unable to create pending manual subscription.')
+    }
+
+    const whatsappMessage = [
+      'Hello, I have made a subscription payment and I want to send my receipt.',
+      `Name: ${actor.name}`,
+      `Email: ${actor.email}`,
+      `Plan: ${plan.name}`,
+      `Amount: NGN ${plan.priceAmount.toLocaleString()}`,
+      `Reference: ${reference}`,
+    ].join('\n')
+
+    return {
+      paymentProvider: 'manual' as const,
+      reference,
+      whatsappUrl: buildWhatsappUrl(whatsappMessage),
+    }
   }
 
   const env = getServerEnv()
@@ -200,6 +295,7 @@ export async function initializeSubscriptionCheckout(actor: AuthUser, planId: st
   }
 
   return {
+    paymentProvider: 'paystack' as const,
     authorizationUrl: initialized.authorization_url,
     reference,
   }

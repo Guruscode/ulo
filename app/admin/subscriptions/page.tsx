@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Pencil, Plus } from 'lucide-react'
+import { CreditCard, Landmark, Loader2, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import AdminLayout from '@/components/admin/admin-layout'
@@ -134,6 +134,11 @@ export default function AdminSubscriptionsPage() {
   const [form, setForm] = useState<PlanForm>(EMPTY_FORM)
   const [actingSubscriptionId, setActingSubscriptionId] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<SubscriptionPaymentMethod>('paystack')
+  const [paymentDetails, setPaymentDetails] = useState({
+    bankName: 'Access Bank',
+    accountName: 'ULO TECHNOLOGIES',
+    accountNumber: '0012345678',
+  })
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false)
 
   const loadData = async () => {
@@ -147,6 +152,11 @@ export default function AdminSubscriptionsPage() {
       setPlans(plansResponse.plans)
       setSubscriptions(subscriptionsResponse.subscriptions)
       setPaymentMethod(settingsResponse.method)
+      setPaymentDetails({
+        bankName: settingsResponse.bankName,
+        accountName: settingsResponse.accountName,
+        accountNumber: settingsResponse.accountNumber,
+      })
     } catch (error) {
       toast.error(error instanceof ApiClientError ? error.message : 'Unable to load subscription data.')
     } finally {
@@ -219,11 +229,40 @@ export default function AdminSubscriptionsPage() {
   const updatePaymentMethod = async (method: SubscriptionPaymentMethod) => {
     setSavingPaymentMethod(true)
     try {
-      const response = await updateAdminSubscriptionSettingsRequest(method)
+      const response = await updateAdminSubscriptionSettingsRequest({
+        method,
+        ...paymentDetails,
+      })
       setPaymentMethod(response.method)
+      setPaymentDetails({
+        bankName: response.bankName,
+        accountName: response.accountName,
+        accountNumber: response.accountNumber,
+      })
       toast.success('Subscription payment method updated.')
     } catch (error) {
       toast.error(error instanceof ApiClientError ? error.message : 'Unable to update payment method.')
+    } finally {
+      setSavingPaymentMethod(false)
+    }
+  }
+
+  const savePaymentDetails = async () => {
+    setSavingPaymentMethod(true)
+    try {
+      const response = await updateAdminSubscriptionSettingsRequest({
+        method: paymentMethod,
+        ...paymentDetails,
+      })
+      setPaymentMethod(response.method)
+      setPaymentDetails({
+        bankName: response.bankName,
+        accountName: response.accountName,
+        accountNumber: response.accountNumber,
+      })
+      toast.success('Account payment details saved.')
+    } catch (error) {
+      toast.error(error instanceof ApiClientError ? error.message : 'Unable to save account payment details.')
     } finally {
       setSavingPaymentMethod(false)
     }
@@ -251,34 +290,88 @@ export default function AdminSubscriptionsPage() {
           </Card>
         ) : (
           <>
+            <Card className="p-6">
+              <div className="flex flex-col gap-5">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Subscription Payment Method</h2>
+                  <p className="mt-1 text-sm text-slate-600">This controls what users see on the subscription page. Only one method is active at a time.</p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Button
+                    type="button"
+                    variant={paymentMethod === 'paystack' ? 'default' : 'outline'}
+                    disabled={savingPaymentMethod}
+                    onClick={() => void updatePaymentMethod('paystack')}
+                    className="justify-start"
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Use Paystack
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={paymentMethod === 'account' ? 'default' : 'outline'}
+                    disabled={savingPaymentMethod}
+                    onClick={() => void updatePaymentMethod('account')}
+                    className="justify-start"
+                  >
+                    <Landmark className="mr-2 h-4 w-4" />
+                    Use Account Number
+                  </Button>
+                </div>
+
+                <div className="rounded-xl border bg-slate-50 p-4 text-sm text-slate-600">
+                  <p className="font-medium text-slate-900">
+                    Current method: {paymentMethod === 'paystack' ? 'Paystack' : 'Account Number'}
+                  </p>
+                  <p className="mt-1">
+                    {paymentMethod === 'paystack'
+                      ? 'Users will be redirected to Paystack when subscribing to a paid plan.'
+                      : 'Users will see the account details to transfer subscription payment manually.'}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Bank Name</Label>
+                    <Input
+                      value={paymentDetails.bankName}
+                      onChange={(event) => setPaymentDetails({ ...paymentDetails, bankName: event.target.value })}
+                      placeholder="e.g. Access Bank"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Account Name</Label>
+                    <Input
+                      value={paymentDetails.accountName}
+                      onChange={(event) => setPaymentDetails({ ...paymentDetails, accountName: event.target.value })}
+                      placeholder="Business account name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Account Number</Label>
+                    <Input
+                      value={paymentDetails.accountNumber}
+                      onChange={(event) => setPaymentDetails({ ...paymentDetails, accountNumber: event.target.value })}
+                      placeholder="Bank account number"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button type="button" onClick={() => void savePaymentDetails()} disabled={savingPaymentMethod}>
+                    Save Account Details
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Card className="p-5"><p className="text-sm text-slate-500">Total plans</p><p className="mt-2 text-3xl font-bold text-slate-900">{metrics.totalPlans}</p></Card>
               <Card className="p-5"><p className="text-sm text-slate-500">Active plans</p><p className="mt-2 text-3xl font-bold text-slate-900">{metrics.activePlans}</p></Card>
               <Card className="p-5"><p className="text-sm text-slate-500">Active subscriptions</p><p className="mt-2 text-3xl font-bold text-slate-900">{metrics.activeSubscriptions}</p></Card>
               <Card className="p-5"><p className="text-sm text-slate-500">Active value</p><p className="mt-2 text-3xl font-bold text-slate-900">{formatMoney(metrics.monthlyValue)}</p></Card>
             </div>
-
-            <Card className="p-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Subscription Payment Method</h2>
-                  <p className="mt-1 text-sm text-slate-600">Choose whether subscriptions should be paid through Paystack or by account transfer.</p>
-                </div>
-                <Select
-                  value={paymentMethod}
-                  onValueChange={(value) => void updatePaymentMethod(value as SubscriptionPaymentMethod)}
-                  disabled={savingPaymentMethod}
-                >
-                  <SelectTrigger className="w-[220px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="paystack">Paystack</SelectItem>
-                    <SelectItem value="account">Account Number</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </Card>
 
             <Card className="p-6">
               <div className="flex items-center justify-between gap-3">
