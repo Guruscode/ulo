@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Eye, Loader2, Pencil, ShieldCheck, Trash2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -371,6 +370,9 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
         const validation = getValidationErrors(error)
         setFormError(validation.message)
         setFieldErrors(validation.fieldErrors)
+      } else if (error instanceof ApiClientError && error.code === 'SUBSCRIPTION_LIMIT_REACHED') {
+        setFormError(error.message)
+        toast.error(error.message)
       } else {
         const message =
           error instanceof ApiClientError ? error.message : 'Unable to save the property right now.'
@@ -846,24 +848,34 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               {fieldErrors.imageUrls?.[0] ? <p className="text-sm text-red-600">{fieldErrors.imageUrls[0]}</p> : null}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="videoUrl">Neighbourhood / Tour Video</Label>
+                  <Label htmlFor="videoUrl">Neighbourhood / Tour Video (Optional)</Label>
                   <div className="space-y-2">
                     <FileUpload
                       id="videoUrl"
-                      label="Upload Video (Max 4 MB)"
+                      label="Upload Optional Video (Max 4 MB)"
                       uploadingLabel="Uploading video..."
                       accept="video/*"
                       maxSizeMb={4}
                       onUpload={(url) => setForm({ ...form, videoUrl: url })}
                     />
                     {form.videoUrl ? (
-                      <video
-                        src={form.videoUrl}
-                        controls
-                        className="max-h-52 w-full rounded-lg border bg-black"
-                      />
+                      <div className="space-y-2">
+                        <video
+                          src={form.videoUrl}
+                          controls
+                          className="max-h-52 w-full rounded-lg border bg-black"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setForm({ ...form, videoUrl: '' })}
+                        >
+                          Remove video
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
+                  <p className="text-xs text-slate-500">You can submit the property without a video.</p>
                   {fieldErrors.videoUrl?.[0] ? <p className="text-sm text-red-600">{fieldErrors.videoUrl[0]}</p> : null}
                 </div>
                 {mode === 'admin' ? (
@@ -935,10 +947,8 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                   If you have already reached your plan limit, submission will be blocked until you upgrade your subscription.
                 </p>
                 <div className="mt-4">
-                  <Button asChild variant="outline">
-                    <Link href="/dashboard/subscriptions">
-                      Manage subscription
-                    </Link>
+                  <Button asChild type="button" variant="outline">
+                    <a href="/dashboard/subscriptions">Open subscription page</a>
                   </Button>
                 </div>
               </div>

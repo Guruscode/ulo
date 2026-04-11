@@ -290,6 +290,10 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
       closeForm()
       await loadData()
     } catch (error) {
+      if (error instanceof ApiClientError && error.code === 'SUBSCRIPTION_LIMIT_REACHED') {
+        toast.error(error.message)
+        return
+      }
       const message =
         error instanceof ApiClientError ? error.message : 'Unable to save the hotel right now.'
       toast.error(message)

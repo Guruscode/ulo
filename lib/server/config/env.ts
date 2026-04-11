@@ -65,7 +65,7 @@ export function getServerEnv(): ServerEnv {
     subscriptionBankName: process.env.SUBSCRIPTION_BANK_NAME,
     subscriptionAccountName: process.env.SUBSCRIPTION_ACCOUNT_NAME,
     subscriptionAccountNumber: process.env.SUBSCRIPTION_ACCOUNT_NUMBER,
-    subscriptionWhatsappNumber: process.env.SUBSCRIPTION_WHATSAPP_NUMBER,
+    subscriptionWhatsappNumber: process.env.SUBSCRIPTION_WHATSAPP_NUMBER || '2349161921437',
   }
 
   return cachedEnv

@@ -9,6 +9,14 @@ import DashboardLayout from '@/components/dashboard/dashboard-layout'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { ApiClientError } from '@/lib/client/api-error'
 import {
   getCurrentSubscriptionRequest,
@@ -51,6 +59,12 @@ export default function DashboardSubscriptionsPage() {
     accountName: 'ULO TECHNOLOGIES',
     accountNumber: '0012345678',
   })
+  const [manualCheckout, setManualCheckout] = useState<{
+    planName: string
+    amount: number
+    reference: string
+    whatsappUrl: string
+  } | null>(null)
 
   const loadData = async () => {
     setLoading(true)
@@ -98,8 +112,13 @@ export default function DashboardSubscriptionsPage() {
     try {
       const response = await initializeSubscriptionCheckoutRequest(plan.id)
       if (response.paymentProvider === 'manual' && response.whatsappUrl) {
-        toast.success('Pending subscription created. Send your receipt on WhatsApp for admin approval.')
-        window.location.href = response.whatsappUrl
+        setManualCheckout({
+          planName: plan.name,
+          amount: plan.priceAmount,
+          reference: response.reference,
+          whatsappUrl: response.whatsappUrl,
+        })
+        toast.success('Pending subscription created. Complete the transfer and send proof of payment from the modal.')
         return
       }
 
@@ -117,6 +136,7 @@ export default function DashboardSubscriptionsPage() {
             ? 'Unable to create pending manual subscription.'
             : 'Unable to start Paystack checkout.'
       )
+    } finally {
       setCheckoutPlanId(null)
     }
   }
@@ -260,7 +280,7 @@ export default function DashboardSubscriptionsPage() {
                     </div>
                   </div>
                   <div className="mt-4 rounded-xl border border-dashed bg-white p-4 text-sm text-slate-600">
-                    After payment, click your plan button. A pending subscription will be created and WhatsApp will open so you can send your receipt to admin.
+                    Click your plan button to open the payment modal. After transfer, use the WhatsApp action there to send proof of payment to admin.
                   </div>
                 </div>
               ) : (
@@ -325,6 +345,87 @@ export default function DashboardSubscriptionsPage() {
           </>
         )}
       </div>
+
+      <Dialog open={Boolean(manualCheckout)} onOpenChange={(open) => !open && setManualCheckout(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Pay With Account Number</DialogTitle>
+            <DialogDescription>
+              Your subscription is now pending. Make the transfer below, then send your proof of payment on WhatsApp for admin approval.
+            </DialogDescription>
+          </DialogHeader>
+
+          {manualCheckout ? (
+            <div className="space-y-5">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Plan</p>
+                  <p className="mt-2 font-semibold text-slate-900">{manualCheckout.planName}</p>
+                </div>
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Amount</p>
+                  <p className="mt-2 font-semibold text-slate-900">{formatMoney(manualCheckout.amount)}</p>
+                </div>
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Bank</p>
+                  <p className="mt-2 font-semibold text-slate-900">{manualPayment.bankName}</p>
+                </div>
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Account Name</p>
+                  <p className="mt-2 font-semibold text-slate-900">{manualPayment.accountName}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Account Number</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="font-semibold text-slate-900">{manualPayment.accountNumber}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(manualPayment.accountNumber)
+                      toast.success('Account number copied.')
+                    }}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Pending Reference</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="font-semibold text-slate-900">{manualCheckout.reference}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(manualCheckout.reference)
+                      toast.success('Reference copied.')
+                    }}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManualCheckout(null)}>
+              Close
+            </Button>
+            {manualCheckout ? (
+              <Button onClick={() => { window.location.href = manualCheckout.whatsappUrl }}>
+                Send Proof Via WhatsApp
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }
