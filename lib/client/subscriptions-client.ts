@@ -1,5 +1,5 @@
 import { apiRequest } from '@/lib/client/api-client'
-import type { SubscriptionPlanRecord, UserSubscriptionRecord } from '@/lib/subscriptions/types'
+import type { SubscriptionPaymentMethod, SubscriptionPlanRecord, UserSubscriptionRecord } from '@/lib/subscriptions/types'
 
 type PlanPayload = {
   name: string
@@ -41,7 +41,24 @@ export function getCurrentSubscriptionRequest() {
   return apiRequest<{
     plan: SubscriptionPlanRecord
     subscription: UserSubscriptionRecord | null
+    paymentMethod: SubscriptionPaymentMethod
+    manualPayment?: {
+      bankName: string
+      accountName: string
+      accountNumber: string
+    }
   }>('/api/subscriptions/current', { method: 'GET' })
+}
+
+export function getAdminSubscriptionSettingsRequest() {
+  return apiRequest<{ method: SubscriptionPaymentMethod }>('/api/admin/subscriptions/settings', { method: 'GET' })
+}
+
+export function updateAdminSubscriptionSettingsRequest(method: SubscriptionPaymentMethod) {
+  return apiRequest<{ method: SubscriptionPaymentMethod }>('/api/admin/subscriptions/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({ method }),
+  })
 }
 
 export function initializeSubscriptionCheckoutRequest(planId: string) {

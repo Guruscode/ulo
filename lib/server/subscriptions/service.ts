@@ -2,9 +2,11 @@ import { randomUUID } from 'crypto'
 import { z } from 'zod'
 
 import type { AuthUser } from '@/lib/auth/types'
-import type { SubscriptionPlanRecord } from '@/lib/subscriptions/types'
+import type { SubscriptionPaymentMethod, SubscriptionPlanRecord } from '@/lib/subscriptions/types'
 import { ApiError } from '@/lib/server/http/api-error'
 import { getServerEnv } from '@/lib/server/config/env'
+import { getDbClient } from '@/lib/server/db/client'
+import { initializeDatabase } from '@/lib/server/db/init'
 import { initializePaystackTransaction, verifyPaystackTransaction } from '@/lib/server/paystack/client'
 import { seededSubscriptionPlans } from '@/lib/server/subscriptions/seed-data'
 import {
@@ -28,6 +30,8 @@ function requireAdmin(actor: AuthUser) {
     throw new ApiError(403, 'FORBIDDEN', 'Admin access is required.')
   }
 }
+
+const SUBSCRIPTION_PAYMENT_METHOD_KEY = 'subscription_payment_method'
 
 function subscriptionPlanSchema() {
   return z.object({
@@ -112,7 +116,45 @@ export async function getEffectiveSubscriptionForUser(userId: string) {
   return { plan: freePlan, subscription: null }
 }
 
+export async function getSubscriptionPaymentMethod(): Promise<SubscriptionPaymentMethod> {
+  await initializeDatabase()
+  const db = getDbClient()
+  const result = await db.execute({
+    sql: `SELECT value FROM app_settings WHERE key = ? LIMIT 1`,
+    args: [SUBSCRIPTION_PAYMENT_METHOD_KEY],
+  })
+
+  return result.rows[0]?.value === 'account' ? 'account' : 'paystack'
+}
+
+export async function setSubscriptionPaymentMethodForAdmin(actor: AuthUser, method: SubscriptionPaymentMethod) {
+  requireAdmin(actor)
+  await initializeDatabase()
+  const db = getDbClient()
+  await db.execute({
+    sql: `
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET
+        value = excluded.value,
+        updated_at = CURRENT_TIMESTAMP
+    `,
+    args: [SUBSCRIPTION_PAYMENT_METHOD_KEY, method],
+  })
+
+  return { method }
+}
+
+function getAdminListingLimit(actor: AuthUser, type: 'property' | 'hotel') {
+  return type === 'property' ? actor.propertyListingLimit : actor.hotelListingLimit
+}
+
 export async function initializeSubscriptionCheckout(actor: AuthUser, planId: string) {
+  const paymentMethod = await getSubscriptionPaymentMethod()
+  if (paymentMethod !== 'paystack') {
+    throw new ApiError(403, 'PAYMENT_METHOD_DISABLED', 'Paystack checkout is currently disabled by admin.')
+  }
+
   const plan = await findSubscriptionPlanById(planId)
   if (!plan || !plan.isActive) {
     throw new ApiError(404, 'PLAN_NOT_FOUND', 'Subscription plan not found.')
@@ -235,14 +277,18 @@ export async function updateSubscriptionStatusForAdmin(actor: AuthUser, id: stri
 export async function assertListingCapacity(actor: AuthUser, type: 'property' | 'hotel', currentCount: number) {
   if (actor.role === 'admin') return
 
-  const { plan } = await getEffectiveSubscriptionForUser(actor.id)
-  const limit = type === 'property' ? plan.propertyLimit : plan.hotelLimit
+  const { plan, subscription } = await getEffectiveSubscriptionForUser(actor.id)
+  const limit = subscription
+    ? (type === 'property' ? plan.propertyLimit : plan.hotelLimit)
+    : getAdminListingLimit(actor, type)
 
-  if (limit >= 0 && currentCount >= limit) {
+  if (limit != null && limit >= 0 && currentCount >= limit) {
     throw new ApiError(
       403,
       'SUBSCRIPTION_LIMIT_REACHED',
-      `Your ${plan.name} plan allows ${limit} ${type === 'property' ? 'property' : 'hotel'} listing${limit === 1 ? '' : 's'}.`
+      subscription
+        ? `Your ${plan.name} plan allows ${limit} ${type === 'property' ? 'property' : 'hotel'} listing${limit === 1 ? '' : 's'}.`
+        : `Your admin-assigned access allows ${limit} ${type === 'property' ? 'property' : 'hotel'} listing${limit === 1 ? '' : 's'}.`
     )
   }
 }

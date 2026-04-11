@@ -29,6 +29,8 @@ const USER_COLUMNS = [
   { name: 'email_notifications', sql: `ALTER TABLE users ADD COLUMN email_notifications INTEGER NOT NULL DEFAULT 1` },
   { name: 'push_notifications', sql: `ALTER TABLE users ADD COLUMN push_notifications INTEGER NOT NULL DEFAULT 0` },
   { name: 'two_factor_enabled', sql: `ALTER TABLE users ADD COLUMN two_factor_enabled INTEGER NOT NULL DEFAULT 0` },
+  { name: 'property_listing_limit', sql: `ALTER TABLE users ADD COLUMN property_listing_limit INTEGER` },
+  { name: 'hotel_listing_limit', sql: `ALTER TABLE users ADD COLUMN hotel_listing_limit INTEGER` },
   { name: 'created_at', sql: `ALTER TABLE users ADD COLUMN created_at TEXT` },
   { name: 'updated_at', sql: `ALTER TABLE users ADD COLUMN updated_at TEXT` },
   { name: 'last_login_at', sql: `ALTER TABLE users ADD COLUMN last_login_at TEXT` },
@@ -361,6 +363,17 @@ async function ensurePropertiesTableSchema() {
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_properties_approval_status ON properties(approval_status);`)
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_properties_created_by_user_id ON properties(created_by_user_id);`)
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_properties_type ON properties(type);`)
+}
+
+async function ensureAppSettingsTableSchema() {
+  const db = getDbClient()
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `)
 }
 
 async function ensureHotelsTableSchema() {
@@ -759,6 +772,8 @@ export async function initializeDatabase() {
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL CHECK (role IN ('user', 'admin')),
             is_active INTEGER NOT NULL DEFAULT 1,
+            property_listing_limit INTEGER,
+            hotel_listing_limit INTEGER,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             last_login_at TEXT
@@ -986,6 +1001,7 @@ export async function initializeDatabase() {
       'write'
     )
 
+    await ensureAppSettingsTableSchema()
     await ensureUsersTableSchema()
     await ensureBlogsTableSchema()
     await ensurePropertiesTableSchema()

@@ -200,10 +200,6 @@ function ensurePropertyAccess(property: PropertyRecord | null, actor: AuthUser |
 function ensureCanPublish(actor: AuthUser) {
   if (actor.role === 'admin') return
 
-  if (actor.accountType === 'user') {
-    throw new ApiError(403, 'LISTING_NOT_ALLOWED', 'Standard users cannot create property listings.')
-  }
-
   if (actor.status !== 'active') {
     throw new ApiError(403, 'ACCOUNT_DISABLED', 'Your account is disabled.')
   }

@@ -11,10 +11,6 @@ export default async function DashboardPropertiesPage() {
     redirect('/login')
   }
 
-  if (user.role !== 'admin' && user.accountType !== 'agent' && user.accountType !== 'landlord') {
-    redirect('/dashboard')
-  }
-
   return (
     <DashboardLayout>
       <PropertyManager mode="dashboard" />

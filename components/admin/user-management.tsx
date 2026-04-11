@@ -69,6 +69,8 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
         identityType: nextUser.accountType === 'user' ? null : 'bvn',
         identityNumber: nextUser.identityNumber || null,
         isActive: nextUser.status !== 'disabled',
+        propertyListingLimit: nextUser.propertyListingLimit ?? null,
+        hotelListingLimit: nextUser.hotelListingLimit ?? null,
       })
       setUsers((current) => current.map((item) => (item.id === response.user.id ? response.user : item)))
       setViewUser((current) => (current?.id === response.user.id ? response.user : current))
@@ -204,6 +206,8 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
                 <p><span className="font-medium text-slate-900">Address:</span> {viewUser.address || 'N/A'}</p>
                 <p><span className="font-medium text-slate-900">State / LGA:</span> {viewUser.state || 'N/A'} / {viewUser.localGovernment || 'N/A'}</p>
                 <p><span className="font-medium text-slate-900">Identity:</span> {viewUser.identityType ? `${viewUser.identityType.toUpperCase()} - ${viewUser.identityNumber}` : 'N/A'}</p>
+                <p><span className="font-medium text-slate-900">Property Listing Limit:</span> {viewUser.propertyListingLimit == null ? 'Use subscription/default access' : viewUser.propertyListingLimit < 0 ? 'Unlimited' : viewUser.propertyListingLimit}</p>
+                <p><span className="font-medium text-slate-900">Hotel Listing Limit:</span> {viewUser.hotelListingLimit == null ? 'Use subscription/default access' : viewUser.hotelListingLimit < 0 ? 'Unlimited' : viewUser.hotelListingLimit}</p>
               </div>
             </>
           ) : null}
@@ -226,6 +230,30 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
                 <div className="space-y-2 md:col-span-2"><Label>Address</Label><Input value={editUser.address || ''} onChange={(event) => setEditUser({ ...editUser, address: event.target.value })} /></div>
                 <div className="space-y-2"><Label>State</Label><Input value={editUser.state || ''} onChange={(event) => setEditUser({ ...editUser, state: event.target.value })} /></div>
                 <div className="space-y-2"><Label>Local Government</Label><Input value={editUser.localGovernment || ''} onChange={(event) => setEditUser({ ...editUser, localGovernment: event.target.value })} /></div>
+                <div className="space-y-2">
+                  <Label>Property Listing Limit</Label>
+                  <Input
+                    type="number"
+                    value={editUser.propertyListingLimit == null ? '' : String(editUser.propertyListingLimit)}
+                    onChange={(event) => setEditUser({
+                      ...editUser,
+                      propertyListingLimit: event.target.value === '' ? null : Number(event.target.value),
+                    })}
+                    placeholder="Blank = subscription/default"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hotel Listing Limit</Label>
+                  <Input
+                    type="number"
+                    value={editUser.hotelListingLimit == null ? '' : String(editUser.hotelListingLimit)}
+                    onChange={(event) => setEditUser({
+                      ...editUser,
+                      hotelListingLimit: event.target.value === '' ? null : Number(event.target.value),
+                    })}
+                    placeholder="Blank = subscription/default"
+                  />
+                </div>
                 <div className="flex items-center justify-between rounded-lg border px-4 py-3 md:col-span-2">
                   <div>
                     <p className="font-medium text-slate-900">Enable Account</p>

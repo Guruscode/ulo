@@ -16,6 +16,8 @@ const adminUserUpdateSchema = z.object({
   identityType: z.enum(['bvn']).optional().nullable(),
   identityNumber: z.string().trim().optional().nullable(),
   isActive: z.boolean(),
+  propertyListingLimit: z.number().int().min(-1).optional().nullable(),
+  hotelListingLimit: z.number().int().min(-1).optional().nullable(),
 }).superRefine((data, ctx) => {
   if (data.accountType !== 'user' && !data.identityNumber?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['identityNumber'], message: 'Identity number is required.' })
@@ -66,6 +68,8 @@ export async function updateUserForAdmin(actor: AuthUser, id: string, input: unk
     localGovernment: parsed.data.localGovernment || null,
     identityType: parsed.data.identityType ?? null,
     identityNumber: parsed.data.identityNumber || null,
+    propertyListingLimit: parsed.data.propertyListingLimit ?? null,
+    hotelListingLimit: parsed.data.hotelListingLimit ?? null,
   })
 
   if (!updated) {

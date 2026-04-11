@@ -19,6 +19,9 @@ type OptionalServerEnv = {
   appUrl?: string
   paystackSecretKey?: string
   paystackPublicKey?: string
+  subscriptionBankName?: string
+  subscriptionAccountName?: string
+  subscriptionAccountNumber?: string
 }
 
 export type ServerEnv = RequiredServerEnv & OptionalServerEnv
@@ -58,6 +61,9 @@ export function getServerEnv(): ServerEnv {
     appUrl: process.env.APP_URL,
     paystackSecretKey: process.env.PAYSTACK_SECRET_KEY,
     paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
+    subscriptionBankName: process.env.SUBSCRIPTION_BANK_NAME,
+    subscriptionAccountName: process.env.SUBSCRIPTION_ACCOUNT_NAME,
+    subscriptionAccountNumber: process.env.SUBSCRIPTION_ACCOUNT_NUMBER,
   }
 
   return cachedEnv

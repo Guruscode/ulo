@@ -34,6 +34,8 @@ function mapUserRow(row: ResultSet['rows'][number]): UserRecord {
     emailNotifications: Number(row.email_notifications) === 1,
     pushNotifications: Number(row.push_notifications) === 1,
     twoFactorEnabled: Number(row.two_factor_enabled) === 1,
+    propertyListingLimit: row.property_listing_limit == null ? null : Number(row.property_listing_limit),
+    hotelListingLimit: row.hotel_listing_limit == null ? null : Number(row.hotel_listing_limit),
     passwordHash: String(row.password_hash),
     isActive: Number(row.is_active) === 1,
     createdAt: String(row.created_at),
@@ -74,6 +76,8 @@ export async function findUserByEmail(email: string) {
         email_notifications,
         push_notifications,
         two_factor_enabled,
+        property_listing_limit,
+        hotel_listing_limit,
         COALESCE(NULLIF(password_hash, ''), hashed_password, '') AS password_hash,
         COALESCE(is_active, 1) AS is_active,
         COALESCE(created_at, CURRENT_TIMESTAMP) AS created_at,
@@ -113,6 +117,8 @@ export async function findUserById(id: string) {
         email_notifications,
         push_notifications,
         two_factor_enabled,
+        property_listing_limit,
+        hotel_listing_limit,
         COALESCE(NULLIF(password_hash, ''), hashed_password, '') AS password_hash,
         COALESCE(is_active, 1) AS is_active,
         COALESCE(created_at, CURRENT_TIMESTAMP) AS created_at,
@@ -142,6 +148,8 @@ export async function createUser(input: {
   approvalStatus?: ApprovalStatus
   identityType?: IdentityType | null
   identityNumber?: string | null
+  propertyListingLimit?: number | null
+  hotelListingLimit?: number | null
 }) {
   await initializeDatabase()
 
@@ -150,9 +158,10 @@ export async function createUser(input: {
     sql: `
       INSERT INTO users (
         id, name, email, phone, address, state, local_government, account_type, approval_status,
-        identity_type, identity_number, password_hash, hashed_password, role, created_at, updated_at
+        identity_type, identity_number, password_hash, hashed_password, role, property_listing_limit,
+        hotel_listing_limit, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `,
     args: [
       input.id,
@@ -169,6 +178,8 @@ export async function createUser(input: {
       input.passwordHash,
       input.passwordHash,
       input.role,
+      input.propertyListingLimit ?? null,
+      input.hotelListingLimit ?? null,
     ],
   })
 
@@ -308,7 +319,8 @@ export async function listUsers(filters?: { accountType?: string; approvalStatus
       SELECT
         id, name, email, phone, address, state, local_government, account_type, approval_status,
         identity_type, identity_number, role, profile_image_url, timezone, email_notifications, push_notifications,
-        two_factor_enabled, COALESCE(NULLIF(password_hash, ''), hashed_password, '') AS password_hash,
+        two_factor_enabled, property_listing_limit, hotel_listing_limit,
+        COALESCE(NULLIF(password_hash, ''), hashed_password, '') AS password_hash,
         COALESCE(is_active, 1) AS is_active, COALESCE(created_at, CURRENT_TIMESTAMP) AS created_at,
         COALESCE(updated_at, created_at, CURRENT_TIMESTAMP) AS updated_at, last_login_at
       FROM users
@@ -335,6 +347,8 @@ export async function updateUserAdminFields(
     identityType?: IdentityType | null
     identityNumber?: string | null
     isActive: boolean
+    propertyListingLimit?: number | null
+    hotelListingLimit?: number | null
   }
 ) {
   await initializeDatabase()
@@ -354,6 +368,8 @@ export async function updateUserAdminFields(
         identity_type = ?,
         identity_number = ?,
         is_active = ?,
+        property_listing_limit = ?,
+        hotel_listing_limit = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `,
@@ -369,6 +385,8 @@ export async function updateUserAdminFields(
       input.identityType ?? null,
       input.identityNumber ?? null,
       input.isActive ? 1 : 0,
+      input.propertyListingLimit ?? null,
+      input.hotelListingLimit ?? null,
       id,
     ],
   })

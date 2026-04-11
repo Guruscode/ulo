@@ -29,12 +29,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { ApiClientError } from '@/lib/client/api-error'
 import {
   createSubscriptionPlanRequest,
+  getAdminSubscriptionSettingsRequest,
   listSubscriptionPlansRequest,
   listSubscriptionsRequest,
   updateAdminSubscriptionRequest,
+  updateAdminSubscriptionSettingsRequest,
   updateSubscriptionPlanRequest,
 } from '@/lib/client/subscriptions-client'
-import type { SubscriptionPlanRecord, UserSubscriptionRecord } from '@/lib/subscriptions/types'
+import type { SubscriptionPaymentMethod, SubscriptionPlanRecord, UserSubscriptionRecord } from '@/lib/subscriptions/types'
 
 type PlanForm = {
   name: string
@@ -131,16 +133,20 @@ export default function AdminSubscriptionsPage() {
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlanRecord | null>(null)
   const [form, setForm] = useState<PlanForm>(EMPTY_FORM)
   const [actingSubscriptionId, setActingSubscriptionId] = useState<string | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<SubscriptionPaymentMethod>('paystack')
+  const [savingPaymentMethod, setSavingPaymentMethod] = useState(false)
 
   const loadData = async () => {
     setLoading(true)
     try {
-      const [plansResponse, subscriptionsResponse] = await Promise.all([
+      const [plansResponse, subscriptionsResponse, settingsResponse] = await Promise.all([
         listSubscriptionPlansRequest(),
         listSubscriptionsRequest(),
+        getAdminSubscriptionSettingsRequest(),
       ])
       setPlans(plansResponse.plans)
       setSubscriptions(subscriptionsResponse.subscriptions)
+      setPaymentMethod(settingsResponse.method)
     } catch (error) {
       toast.error(error instanceof ApiClientError ? error.message : 'Unable to load subscription data.')
     } finally {
@@ -210,6 +216,19 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
+  const updatePaymentMethod = async (method: SubscriptionPaymentMethod) => {
+    setSavingPaymentMethod(true)
+    try {
+      const response = await updateAdminSubscriptionSettingsRequest(method)
+      setPaymentMethod(response.method)
+      toast.success('Subscription payment method updated.')
+    } catch (error) {
+      toast.error(error instanceof ApiClientError ? error.message : 'Unable to update payment method.')
+    } finally {
+      setSavingPaymentMethod(false)
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -238,6 +257,28 @@ export default function AdminSubscriptionsPage() {
               <Card className="p-5"><p className="text-sm text-slate-500">Active subscriptions</p><p className="mt-2 text-3xl font-bold text-slate-900">{metrics.activeSubscriptions}</p></Card>
               <Card className="p-5"><p className="text-sm text-slate-500">Active value</p><p className="mt-2 text-3xl font-bold text-slate-900">{formatMoney(metrics.monthlyValue)}</p></Card>
             </div>
+
+            <Card className="p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Subscription Payment Method</h2>
+                  <p className="mt-1 text-sm text-slate-600">Choose whether subscriptions should be paid through Paystack or by account transfer.</p>
+                </div>
+                <Select
+                  value={paymentMethod}
+                  onValueChange={(value) => void updatePaymentMethod(value as SubscriptionPaymentMethod)}
+                  disabled={savingPaymentMethod}
+                >
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="paystack">Paystack</SelectItem>
+                    <SelectItem value="account">Account Number</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </Card>
 
             <Card className="p-6">
               <div className="flex items-center justify-between gap-3">

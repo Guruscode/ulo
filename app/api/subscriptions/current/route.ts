@@ -1,11 +1,24 @@
 import { apiSuccess, withApiHandler } from '@/lib/server/http/responses'
 import { requireAuthenticatedUser } from '@/lib/server/auth/request-auth'
-import { getEffectiveSubscriptionForUser } from '@/lib/server/subscriptions/service'
+import { getServerEnv } from '@/lib/server/config/env'
+import { getEffectiveSubscriptionForUser, getSubscriptionPaymentMethod } from '@/lib/server/subscriptions/service'
 
 export async function GET() {
   return withApiHandler(async () => {
     const actor = await requireAuthenticatedUser()
-    const current = await getEffectiveSubscriptionForUser(actor.id)
-    return apiSuccess(current)
+    const [current, paymentMethod] = await Promise.all([
+      getEffectiveSubscriptionForUser(actor.id),
+      getSubscriptionPaymentMethod(),
+    ])
+    const env = getServerEnv()
+    return apiSuccess({
+      ...current,
+      paymentMethod,
+      manualPayment: {
+        bankName: env.subscriptionBankName || 'Access Bank',
+        accountName: env.subscriptionAccountName || 'ULO TECHNOLOGIES',
+        accountNumber: env.subscriptionAccountNumber || '0012345678',
+      },
+    })
   })
 }

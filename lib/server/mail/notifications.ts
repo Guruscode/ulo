@@ -124,7 +124,7 @@ function renderEmail(input: EmailTemplateInput) {
 
 function getAdminNotificationEmail() {
   const env = getServerEnv()
-  return env.notificationAdminEmail || env.adminEmail || null
+  return env.notificationAdminEmail || env.adminEmail || 'theuloreal@gmail.com'
 }
 
 export async function sendSignupOtpEmail(input: { email: string; name: string; otp: string }) {
@@ -172,6 +172,32 @@ export async function sendWelcomeEmail(user: AuthUser) {
       actionLabel: user.role === 'admin' ? 'Open Admin Dashboard' : 'Open Dashboard',
       actionUrl: absoluteUrl(user.role === 'admin' ? '/admin' : '/dashboard'),
       closing: 'If you have any questions getting started, reply through the support channels on the platform and our team will help you.',
+    }),
+  })
+}
+
+export async function sendAdminRegistrationEmail(user: AuthUser) {
+  const adminEmail = getAdminNotificationEmail()
+  if (!adminEmail) return
+
+  await sendMailSafely({
+    to: adminEmail,
+    subject: 'New user registration on ULO',
+    ...renderEmail({
+      eyebrow: 'Admin Alert',
+      title: 'A new user completed registration',
+      intro: 'A new account has just been created on ULO.',
+      body: [
+        'Review the account details below and approve the user if their account type requires admin approval.',
+      ],
+      sections: [
+        { label: 'Name', value: user.name },
+        { label: 'Email', value: user.email },
+        { label: 'Account Type', value: user.accountType?.replace('_', ' ') || 'user' },
+        { label: 'Approval Status', value: user.approvalStatus || 'approved' },
+      ],
+      actionLabel: 'Open Users',
+      actionUrl: absoluteUrl('/admin/users'),
     }),
   })
 }

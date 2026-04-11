@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Check, CreditCard, Loader2 } from 'lucide-react'
+import { ArrowRight, Check, Copy, CreditCard, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
@@ -16,7 +16,7 @@ import {
   listSubscriptionPlansRequest,
   listSubscriptionsRequest,
 } from '@/lib/client/subscriptions-client'
-import type { SubscriptionPlanRecord, UserSubscriptionRecord } from '@/lib/subscriptions/types'
+import type { SubscriptionPaymentMethod, SubscriptionPlanRecord, UserSubscriptionRecord } from '@/lib/subscriptions/types'
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat('en-NG', {
@@ -45,6 +45,12 @@ export default function DashboardSubscriptionsPage() {
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscriptionRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<SubscriptionPaymentMethod>('paystack')
+  const [manualPayment, setManualPayment] = useState({
+    bankName: 'Access Bank',
+    accountName: 'ULO TECHNOLOGIES',
+    accountNumber: '0012345678',
+  })
 
   const loadData = async () => {
     setLoading(true)
@@ -58,6 +64,10 @@ export default function DashboardSubscriptionsPage() {
       setCurrentPlan(currentResponse.plan)
       setCurrentSubscription(currentResponse.subscription)
       setHistory(historyResponse.subscriptions)
+      setPaymentMethod(currentResponse.paymentMethod)
+      if ('manualPayment' in currentResponse && currentResponse.manualPayment) {
+        setManualPayment(currentResponse.manualPayment)
+      }
     } catch (error) {
       toast.error(error instanceof ApiClientError ? error.message : 'Unable to load subscriptions.')
     } finally {
@@ -81,6 +91,11 @@ export default function DashboardSubscriptionsPage() {
   const startCheckout = async (plan: SubscriptionPlanRecord) => {
     if (plan.isFree) {
       toast.message('You are already covered by the free plan.')
+      return
+    }
+
+    if (paymentMethod === 'account') {
+      toast.message('Use the account details below and contact admin after payment confirmation.')
       return
     }
 
@@ -187,12 +202,58 @@ export default function DashboardSubscriptionsPage() {
                       onClick={() => void startCheckout(plan)}
                     >
                       {isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
-                      {isCurrent ? 'Current Plan' : plan.isFree ? 'Included' : 'Subscribe with Paystack'}
+                      {isCurrent ? 'Current Plan' : plan.isFree ? 'Included' : paymentMethod === 'paystack' ? 'Subscribe with Paystack' : 'Pay with Account Number'}
                     </Button>
                   </Card>
                 )
               })}
             </div>
+
+            <Card className="p-6">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Payment Method</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Admin has enabled {paymentMethod === 'paystack' ? 'Paystack checkout' : 'account transfer'} for subscriptions.
+                </p>
+              </div>
+
+              {paymentMethod === 'account' ? (
+                <div className="mt-5 rounded-2xl border bg-slate-50 p-5">
+                  <p className="text-sm text-slate-600">Transfer the subscription amount to the account below, then notify the admin for activation.</p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border bg-white p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Bank</p>
+                      <p className="mt-2 font-semibold text-slate-900">{manualPayment.bankName}</p>
+                    </div>
+                    <div className="rounded-xl border bg-white p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Account Name</p>
+                      <p className="mt-2 font-semibold text-slate-900">{manualPayment.accountName}</p>
+                    </div>
+                    <div className="rounded-xl border bg-white p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Account Number</p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className="font-semibold text-slate-900">{manualPayment.accountNumber}</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(manualPayment.accountNumber)
+                            toast.success('Account number copied.')
+                          }}
+                        >
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl border bg-slate-50 p-5 text-sm text-slate-600">
+                  Complete your subscription directly with Paystack when you select a paid plan.
+                </div>
+              )}
+            </Card>
 
             <Card className="p-6">
               <div className="flex items-center justify-between gap-3">

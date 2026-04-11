@@ -23,6 +23,8 @@ export interface AuthUser {
   emailNotifications?: boolean
   pushNotifications?: boolean
   twoFactorEnabled?: boolean
+  propertyListingLimit?: number | null
+  hotelListingLimit?: number | null
   createdAt: string
   updatedAt: string
 }

@@ -1,5 +1,6 @@
 export type BillingInterval = 'month' | 'year'
 export type SubscriptionStatus = 'pending' | 'active' | 'expired' | 'cancelled'
+export type SubscriptionPaymentMethod = 'paystack' | 'account'
 
 export interface SubscriptionPlanRecord {
   id: string

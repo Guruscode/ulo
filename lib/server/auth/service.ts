@@ -26,7 +26,7 @@ import {
 } from '@/lib/server/auth/signup-verification'
 import { createSessionToken, verifySessionToken } from '@/lib/server/auth/session'
 import { getServerEnv } from '@/lib/server/config/env'
-import { sendSignupOtpEmail, sendWelcomeEmail } from '@/lib/server/mail/notifications'
+import { sendAdminRegistrationEmail, sendSignupOtpEmail, sendWelcomeEmail } from '@/lib/server/mail/notifications'
 
 const registerSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters.'),
@@ -245,6 +245,7 @@ export async function verifySignupOtp(input: unknown) {
 
   const authUser = toAuthUser(user)
   await sendWelcomeEmail(authUser)
+  await sendAdminRegistrationEmail(authUser)
 
   return {
     user: authUser,

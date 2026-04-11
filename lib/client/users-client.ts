@@ -26,6 +26,8 @@ export function updateAdminUserRequest(id: string, input: {
   identityType?: 'bvn' | null
   identityNumber?: string | null
   isActive: boolean
+  propertyListingLimit?: number | null
+  hotelListingLimit?: number | null
 }) {
   return apiRequest<{ user: AuthUser }>(`/api/admin/users/${id}`, {
     method: 'PATCH',

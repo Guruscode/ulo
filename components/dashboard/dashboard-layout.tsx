@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const { user, logout } = useAuth()
   const displayName = user?.name || 'User'
-  const canManageProperties = user?.role === 'admin' || user?.accountType === 'agent' || user?.accountType === 'landlord'
+  const canManageProperties = user?.role === 'admin' || Boolean(user)
   const canManageHotels = user?.role === 'admin' || user?.accountType === 'agent' || user?.accountType === 'hotel_manager'
   const visibleNavItems = navItems.filter((item) => {
     if (item.id === 'properties') return canManageProperties
