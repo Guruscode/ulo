@@ -18,7 +18,7 @@ export function usePublicHotels() {
         setHotels(response.hotels)
       } catch (error) {
         const message =
-          error instanceof ApiClientError ? error.message : 'Unable to load hotels right now.'
+          error instanceof Error ? error.message : 'Unable to load hotels right now.'
         toast.error(message)
       } finally {
         setLoading(false)

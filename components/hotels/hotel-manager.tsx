@@ -64,7 +64,7 @@ type HotelForm = {
   city: string
   description: string
   priceValue: string
-  images: [string, string, string, string]
+  images: string[]
   amenities: string
   contactPhone: string
   contactEmail: string
@@ -96,7 +96,7 @@ const EMPTY_FORM: HotelForm = {
   city: '',
   description: '',
   priceValue: '',
-  images: ['', '', '', ''],
+  images: [''],
   amenities: '',
   contactPhone: '',
   contactEmail: '',
@@ -121,12 +121,7 @@ function toFormState(hotel: HotelRecord): HotelForm {
     city,
     description: hotel.description,
     priceValue: String(hotel.priceValue),
-    images: [
-      hotel.images[0] || '',
-      hotel.images[1] || '',
-      hotel.images[2] || '',
-      hotel.images[3] || '',
-    ],
+    images: hotel.images.length > 0 ? hotel.images : [''],
     amenities: hotel.amenities.join(', '),
     contactPhone: hotel.contactPhone,
     contactEmail: hotel.contactEmail,
@@ -159,7 +154,7 @@ function toPayload(form: HotelForm): HotelUpsertInput {
     rating: 0,
     reviewCount: 0,
     priceValue: Number(form.priceValue),
-    images: form.images.map((image) => image.trim()),
+    images: form.images.map((image) => image.trim()).filter(Boolean),
     amenities: form.amenities.split(',').map((amenity) => amenity.trim()).filter(Boolean),
     contactPhone: form.contactPhone.trim(),
     contactEmail: form.contactEmail.trim(),
@@ -228,7 +223,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
       setBookings(bookingResponse.bookings)
     } catch (error) {
       const message =
-        error instanceof ApiClientError ? error.message : 'Unable to load hotels right now.'
+        error instanceof Error ? error.message : 'Unable to load hotels right now.'
       toast.error(message)
     } finally {
       setLoading(false)
@@ -263,10 +258,21 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
   )
 
   const canSave =
-    form.images.every(Boolean) &&
+    form.images.filter(Boolean).length > 0 &&
     Boolean(form.bankName && form.bankAccountName && form.bankAccountNumber) &&
     form.rooms.length > 0 &&
     form.rooms.every((room) => room.name && room.priceValue && room.images[0])
+
+  const addHotelImageField = () => {
+    if (form.images.length >= 8) return
+    setForm({ ...form, images: [...form.images, ''] })
+  }
+
+  const removeHotelImageField = (index: number) => {
+    if (form.images.length <= 1) return
+    const next = form.images.filter((_, idx) => idx !== index)
+    setForm({ ...form, images: next.length > 0 ? next : [''] })
+  }
 
   const saveHotel = async () => {
     setSaving(true)
@@ -499,7 +505,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>{editingHotel ? 'Edit Hotel' : 'Create Hotel'}</DialogTitle>
-            <DialogDescription>Complete hotel information, upload gallery images up to 4 MB each, and manage room inventory.</DialogDescription>
+            <DialogDescription>Complete hotel information, upload 1 to 8 gallery images up to 4 MB each, and manage room inventory.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -554,27 +560,47 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
             ) : null}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {form.images.map((image, index) => (
-              <div key={index} className="space-y-2">
-                <Label>Upload Image {index + 1}</Label>
-                <div className="flex gap-2">
-                  <FileUpload
-                    id={`hotel-image-${index}`}
-                    label={`Upload Image ${index + 1} (Max 4 MB)`}
-                    uploadingLabel="Uploading image..."
-                    accept="image/*"
-                    maxSizeMb={4}
-                    onUpload={(url) => {
-                      const next = [...form.images] as HotelForm['images']
-                      next[index] = url
-                      setForm({ ...form, images: next })
-                    }}
-                  />
-                  {image && <img src={image} alt="" className="h-20 w-20 rounded object-cover" />}
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {form.images.map((image, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between gap-4">
+                    <Label>Upload Image {index + 1}</Label>
+                    {form.images.length > 1 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => removeHotelImageField(index)}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="flex gap-2">
+                    <FileUpload
+                      id={`hotel-image-${index}`}
+                      label={`Upload Image ${index + 1} (Max 4 MB)`}
+                      uploadingLabel="Uploading image..."
+                      accept="image/*"
+                      maxSizeMb={4}
+                      onUpload={(url) => {
+                        const next = [...form.images]
+                        next[index] = url
+                        setForm({ ...form, images: next })
+                      }}
+                    />
+                    {image ? <img src={image} alt="" className="h-20 w-20 rounded object-cover" /> : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="button" variant="outline" onClick={addHotelImageField} disabled={form.images.length >= 8}>
+                Add another image
+              </Button>
+              <p className="text-sm text-slate-500">{form.images.filter(Boolean).length} of 8 images added.</p>
+            </div>
           </div>
 
           <div className="space-y-4">

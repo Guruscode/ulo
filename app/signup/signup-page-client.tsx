@@ -40,7 +40,6 @@ export default function SignupPageClient() {
     state: '',
     localGovernment: '',
     accountType: 'user',
-    identityNumber: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false,
@@ -104,8 +103,6 @@ export default function SignupPageClient() {
         state: formData.state,
         localGovernment: formData.localGovernment,
         accountType: formData.accountType as 'user' | 'agent' | 'landlord' | 'hotel_manager',
-        identityType: formData.accountType === 'user' ? null : 'bvn',
-        identityNumber: formData.accountType === 'user' ? null : formData.identityNumber,
         password: formData.password,
         agreeToTerms: formData.agreeToTerms,
       })
@@ -294,7 +291,6 @@ export default function SignupPageClient() {
                       setFormData((prev) => ({
                         ...prev,
                         accountType: event.target.value,
-                        identityNumber: event.target.value === 'user' ? '' : prev.identityNumber,
                       }))
                     }
                     className="h-11 w-full rounded-md border border-gray-200 bg-gray-50 px-3 text-sm focus:bg-white"
@@ -305,13 +301,6 @@ export default function SignupPageClient() {
                     <option value="hotel_manager">Hotel Manager</option>
                   </select>
                 </div>
-
-                {formData.accountType !== 'user' ? (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">BVN Number</label>
-                    <Input type="text" name="identityNumber" placeholder="Enter BVN number" value={formData.identityNumber} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
-                  </div>
-                ) : null}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>

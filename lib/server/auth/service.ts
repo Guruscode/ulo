@@ -45,12 +45,6 @@ const registerSchema = z.object({
     .regex(/[a-z]/, 'Password must include a lowercase letter.')
     .regex(/[0-9]/, 'Password must include a number.'),
   agreeToTerms: z.boolean().refine(Boolean, 'You must agree to the terms.'),
-}).superRefine((data, ctx) => {
-  if (data.accountType !== 'user') {
-    if (!data.identityNumber?.trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['identityNumber'], message: 'Identity number is required.' })
-    }
-  }
 })
 
 const loginSchema = z.object({
@@ -169,8 +163,8 @@ export async function requestSignupOtp(input: unknown) {
     state,
     localGovernment,
     accountType,
-    identityType: accountType === 'user' ? null : (identityType ?? 'bvn'),
-    identityNumber,
+    identityType: null,
+    identityNumber: null,
     passwordHash,
     otpHash: hashOtp(otp),
     expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),

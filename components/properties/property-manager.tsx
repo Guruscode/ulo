@@ -71,7 +71,7 @@ type PropertyFormState = {
   bedrooms: string
   bathrooms: string
   features: string
-  imageUrls: [string, string, string, string]
+  imageUrls: string[]
   videoUrl: string
   referenceCode: string
   documentInfo: string
@@ -134,7 +134,7 @@ const EMPTY_FORM: PropertyFormState = {
   bedrooms: '0',
   bathrooms: '0',
   features: '',
-  imageUrls: ['', '', '', ''],
+  imageUrls: [''],
   videoUrl: '',
   referenceCode: '',
   documentInfo: '',
@@ -169,12 +169,7 @@ function toFormState(property: PropertyRecord): PropertyFormState {
     bedrooms: String(property.bedrooms),
     bathrooms: String(property.bathrooms),
     features: property.features.join(', '),
-    imageUrls: [
-      property.imageUrls[0] || '',
-      property.imageUrls[1] || '',
-      property.imageUrls[2] || '',
-      property.imageUrls[3] || '',
-    ],
+    imageUrls: property.imageUrls.length > 0 ? property.imageUrls : [''],
     videoUrl: property.videoUrl || '',
     referenceCode: property.referenceCode,
     documentInfo: property.documentInfo || '',
@@ -214,6 +209,7 @@ function toRequestPayload(form: PropertyFormState): PropertyUpsertInput {
     imageUrls: form.imageUrls.map((url) => url.trim()),
     videoUrl: form.videoUrl.trim() || null,
     referenceCode: form.referenceCode.trim() || null,
+    imageUrls: form.imageUrls.map((url) => url.trim()).filter(Boolean),
     documentInfo: form.documentInfo.trim() || null,
     contactName: form.contactName.trim(),
     contactPhone: form.contactPhone.trim(),
@@ -287,7 +283,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
       setProperties(response.properties)
     } catch (error) {
       const message =
-        error instanceof ApiClientError ? error.message : 'Unable to load properties right now.'
+        error instanceof Error ? error.message : 'Unable to load properties right now.'
       toast.error(message)
     } finally {
       setLoading(false)
@@ -304,9 +300,20 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
   )
 
   const updateImageUrlAtIndex = (index: number, value: string) => {
-    const next = [...form.imageUrls] as PropertyFormState['imageUrls']
+    const next = [...form.imageUrls]
     next[index] = value
     setForm({ ...form, imageUrls: next })
+  }
+
+  const addImageUrlField = () => {
+    if (form.imageUrls.length >= 8) return
+    setForm({ ...form, imageUrls: [...form.imageUrls, ''] })
+  }
+
+  const removeImageUrlField = (index: number) => {
+    if (form.imageUrls.length <= 1) return
+    const next = form.imageUrls.filter((_, idx) => idx !== index)
+    setForm({ ...form, imageUrls: next.length > 0 ? next : [''] })
   }
 
   const openCreateForm = () => {
@@ -435,7 +442,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               (isLandType(form.type) || form.bathrooms !== '')
           )
         : formStep === 2
-          ? form.imageUrls.every(Boolean) &&
+          ? form.imageUrls.filter(Boolean).length > 0 &&
             Boolean(
               form.contactName &&
                 form.contactPhone &&
@@ -601,7 +608,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
           <DialogHeader>
             <DialogTitle>{editingProperty ? 'Edit Property' : 'Create Property'}</DialogTitle>
             <DialogDescription>
-              Complete the listing carefully. Upload exactly 4 images, each no larger than 4 MB.
+              Complete the listing carefully. Upload between 1 and 8 images, each no larger than 4 MB.
             </DialogDescription>
           </DialogHeader>
 
@@ -824,7 +831,19 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <div className="grid gap-4 md:grid-cols-2">
                 {form.imageUrls.map((imageUrl, index) => (
                   <div key={index} className="space-y-2">
-                    <Label htmlFor={`image-${index}`}>Image {index + 1}</Label>
+                    <div className="flex items-center justify-between gap-4">
+                      <Label htmlFor={`image-${index}`}>Image {index + 1}</Label>
+                      {form.imageUrls.length > 1 ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => removeImageUrlField(index)}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                    </div>
                     <div className="space-y-2">
                       <FileUpload
                         id={`image-${index}`}
@@ -844,6 +863,19 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                     </div>
                   </div>
                 ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addImageUrlField}
+                  disabled={form.imageUrls.length >= 8}
+                >
+                  Add another image
+                </Button>
+                <p className="text-sm text-slate-500">
+                  {form.imageUrls.filter(Boolean).length} of 8 images added.
+                </p>
               </div>
               {fieldErrors.imageUrls?.[0] ? <p className="text-sm text-red-600">{fieldErrors.imageUrls[0]}</p> : null}
               <div className="grid gap-4 md:grid-cols-2">
@@ -930,7 +962,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               <p><span className="font-medium text-slate-900">Type:</span> {form.type}</p>
               {!isLandType(form.type) ? <p><span className="font-medium text-slate-900">Bedrooms:</span> {form.bedrooms}</p> : null}
               {!isLandType(form.type) ? <p><span className="font-medium text-slate-900">Bathrooms:</span> {form.bathrooms}</p> : null}
-              <p><span className="font-medium text-slate-900">Images:</span> {form.imageUrls.filter(Boolean).length} of 4 supplied</p>
+              <p><span className="font-medium text-slate-900">Images:</span> {form.imageUrls.filter(Boolean).length} of 8 supplied</p>
               <p><span className="font-medium text-slate-900">Contact:</span> {form.contactName} ({form.contactEmail})</p>
               <p><span className="font-medium text-slate-900">Approval flow:</span> {mode === 'admin' ? 'Admin-created listings can be published immediately.' : 'This listing will stay hidden from the public site until admin approval.'}</p>
             </div>

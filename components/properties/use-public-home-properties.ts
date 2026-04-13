@@ -19,7 +19,7 @@ export function usePublicHomeProperties() {
         setProperties(response.properties.map(toHomeProperty))
       } catch (error) {
         const message =
-          error instanceof ApiClientError ? error.message : 'Unable to load properties right now.'
+          error instanceof Error ? error.message : 'Unable to load properties right now.'
         toast.error(message)
       } finally {
         setLoading(false)
