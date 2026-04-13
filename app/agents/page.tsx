@@ -14,7 +14,7 @@ import { ApiClientError } from '@/lib/client/api-error'
 import { listAgentsRequest } from '@/lib/client/users-client'
 import type { AuthUser } from '@/lib/auth/types'
 
-const DEFAULT_AGENT_IMAGE = '/brand/favicon-black.png'
+const DEFAULT_AGENT_IMAGE = '/brand/logo-primary.png'
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AuthUser[]>([])

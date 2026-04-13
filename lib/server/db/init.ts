@@ -1,10 +1,4 @@
 import { getDbClient } from '@/lib/server/db/client'
-import { ensureBlogsTableSchema } from '@/lib/server/db/blog-schema'
-import { seedBlogsIfNeeded } from '@/lib/server/blog/service'
-import { seedHotelsIfNeeded } from '@/lib/server/hotels/service'
-import { seedNeighbourhoodsIfNeeded } from '@/lib/server/neighbourhoods/service'
-import { seedPropertiesIfNeeded } from '@/lib/server/properties/service'
-import { seedSubscriptionPlansIfNeeded } from '@/lib/server/subscriptions/service'
 
 let initialized = false
 let initializationPromise: Promise<void> | null = null
@@ -1001,24 +995,7 @@ export async function initializeDatabase() {
       'write'
     )
 
-    await ensureAppSettingsTableSchema()
-    await ensureUsersTableSchema()
-    await ensureBlogsTableSchema()
-    await ensurePropertiesTableSchema()
-    await ensureHotelsTableSchema()
-    await ensureSignupVerificationsTableSchema()
-    await ensureSavedPropertiesSchema()
-    await ensureSubscriptionSchema()
-    await ensureNeighbourhoodSchema()
-    await ensureNotificationSchema()
-    await ensurePropertyVerificationRequestsSchema()
-
     initialized = true
-    await seedBlogsIfNeeded()
-    await seedNeighbourhoodsIfNeeded()
-    await seedPropertiesIfNeeded()
-    await seedHotelsIfNeeded()
-    await seedSubscriptionPlansIfNeeded()
   })()
 
 

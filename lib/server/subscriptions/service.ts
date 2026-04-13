@@ -8,11 +8,12 @@ import { getServerEnv } from '@/lib/server/config/env'
 import { getDbClient } from '@/lib/server/db/client'
 import { initializeDatabase } from '@/lib/server/db/init'
 import { initializePaystackTransaction, verifyPaystackTransaction } from '@/lib/server/paystack/client'
-import { seededSubscriptionPlans } from '@/lib/server/subscriptions/seed-data'
 import {
   countSubscriptionPlans,
   createSubscriptionPlan,
   createUserSubscription,
+  countSubscriptionsForPlan,
+  deleteSubscriptionPlan,
   expireActiveUserSubscriptions,
   findCurrentUserSubscription,
   findSubscriptionPlanById,
@@ -23,6 +24,7 @@ import {
   listUserSubscriptions,
   updateSubscriptionPlan,
   updateUserSubscription,
+  deleteUserSubscription,
 } from '@/lib/server/subscriptions/repository'
 
 function requireAdmin(actor: AuthUser) {
@@ -50,19 +52,6 @@ function subscriptionPlanSchema() {
     isActive: z.boolean(),
     paystackPlanCode: z.string().trim().optional().nullable(),
   })
-}
-
-export async function seedSubscriptionPlansIfNeeded() {
-  const count = await countSubscriptionPlans()
-  if (count > 0) return
-
-  for (const plan of seededSubscriptionPlans) {
-    await createSubscriptionPlan({
-      id: randomUUID(),
-      ...plan,
-      paystackPlanCode: null,
-    })
-  }
 }
 
 export async function listPlansForActor(actor?: AuthUser | null) {
@@ -117,6 +106,23 @@ export async function getEffectiveSubscriptionForUser(userId: string) {
   }
 
   return { plan: freePlan, subscription: null }
+}
+
+export async function deletePlanForAdmin(actor: AuthUser, id: string) {
+  requireAdmin(actor)
+  const plan = await findSubscriptionPlanById(id)
+  if (!plan) {
+    throw new ApiError(404, 'PLAN_NOT_FOUND', 'Subscription plan not found.')
+  }
+  if (plan.isFree) {
+    throw new ApiError(400, 'PLAN_DELETE_FORBIDDEN', 'The free plan cannot be deleted.')
+  }
+  const subscriptionsCount = await countSubscriptionsForPlan(id)
+  if (subscriptionsCount > 0) {
+    throw new ApiError(400, 'PLAN_DELETE_BLOCKED', 'Cannot delete a plan while users are subscribed to it.')
+  }
+  await deleteSubscriptionPlan(id)
+  return plan
 }
 
 export async function getSubscriptionPaymentMethod(): Promise<SubscriptionPaymentMethod> {
@@ -368,6 +374,17 @@ export async function updateSubscriptionStatusForAdmin(actor: AuthUser, id: stri
     throw new ApiError(404, 'SUBSCRIPTION_NOT_FOUND', 'Subscription not found.')
   }
   return updated
+}
+
+export async function deleteSubscriptionForAdmin(actor: AuthUser, id: string) {
+  requireAdmin(actor)
+  const existing = await findUserSubscriptionById(id)
+  if (!existing) {
+    throw new ApiError(404, 'SUBSCRIPTION_NOT_FOUND', 'Subscription not found.')
+  }
+
+  await deleteUserSubscription(id)
+  return existing
 }
 
 export async function assertListingCapacity(actor: AuthUser, type: 'property' | 'hotel', currentCount: number) {

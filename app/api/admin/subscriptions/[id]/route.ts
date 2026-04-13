@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { apiSuccess, withApiHandler } from '@/lib/server/http/responses'
 import { requireAuthenticatedUser } from '@/lib/server/auth/request-auth'
 import { ApiError } from '@/lib/server/http/api-error'
-import { updateSubscriptionStatusForAdmin } from '@/lib/server/subscriptions/service'
+import { deleteSubscriptionForAdmin, updateSubscriptionStatusForAdmin } from '@/lib/server/subscriptions/service'
 
 type Params = {
   params: Promise<{ id: string }>
@@ -23,5 +23,14 @@ export async function PATCH(request: Request, context: Params) {
     const { id } = await context.params
     const subscription = await updateSubscriptionStatusForAdmin(actor, id, parsed.data.status)
     return apiSuccess({ subscription }, 'Subscription updated successfully.')
+  })
+}
+
+export async function DELETE(request: Request, context: Params) {
+  return withApiHandler(async () => {
+    const actor = await requireAuthenticatedUser()
+    const { id } = await context.params
+    await deleteSubscriptionForAdmin(actor, id)
+    return apiSuccess({}, 'Subscription deleted successfully.')
   })
 }

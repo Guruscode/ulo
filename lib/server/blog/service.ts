@@ -47,11 +47,6 @@ function slugify(input: string) {
     .replace(/-+/g, '-')
 }
 
-export async function seedBlogsIfNeeded() {
-  const { seedBlogsIfNeeded } = await import('./seed')
-  await seedBlogsIfNeeded()
-}
-
 export async function listBlogs(input: { limit?: number; offset?: number; category?: string; status?: string; search?: string } = {}) {
   return listBlogRecords(input)
 }

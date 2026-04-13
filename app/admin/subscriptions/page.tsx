@@ -29,6 +29,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { ApiClientError } from '@/lib/client/api-error'
 import {
   createSubscriptionPlanRequest,
+  deleteAdminSubscriptionRequest,
+  deleteSubscriptionPlanRequest,
   getAdminSubscriptionSettingsRequest,
   listSubscriptionPlansRequest,
   listSubscriptionsRequest,
@@ -133,6 +135,8 @@ export default function AdminSubscriptionsPage() {
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlanRecord | null>(null)
   const [form, setForm] = useState<PlanForm>(EMPTY_FORM)
   const [actingSubscriptionId, setActingSubscriptionId] = useState<string | null>(null)
+  const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null)
+  const [deletingSubscriptionId, setDeletingSubscriptionId] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<SubscriptionPaymentMethod>('paystack')
   const [paymentDetails, setPaymentDetails] = useState({
     bankName: 'Access Bank',
@@ -207,6 +211,48 @@ export default function AdminSubscriptionsPage() {
       toast.error(error instanceof ApiClientError ? error.message : 'Unable to save subscription plan.')
     } finally {
       setSavingPlan(false)
+    }
+  }
+
+  const deletePlan = async (planId: string) => {
+    const plan = plans.find((item) => item.id === planId)
+    if (!plan) return
+
+    const confirmed = window.confirm(
+      `Delete the "${plan.name}" plan? This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    setDeletingPlanId(planId)
+    try {
+      await deleteSubscriptionPlanRequest(planId)
+      toast.success('Subscription plan deleted.')
+      await loadData()
+    } catch (error) {
+      toast.error(error instanceof ApiClientError ? error.message : 'Unable to delete subscription plan.')
+    } finally {
+      setDeletingPlanId(null)
+    }
+  }
+
+  const deleteSubscription = async (subscriptionId: string) => {
+    const subscription = subscriptions.find((item) => item.id === subscriptionId)
+    if (!subscription) return
+
+    const confirmed = window.confirm(
+      `Delete subscription for ${subscription.userName || subscription.userEmail || 'this user'}? This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    setDeletingSubscriptionId(subscriptionId)
+    try {
+      await deleteAdminSubscriptionRequest(subscriptionId)
+      toast.success('Subscription deleted.')
+      await loadData()
+    } catch (error) {
+      toast.error(error instanceof ApiClientError ? error.message : 'Unable to delete subscription.')
+    } finally {
+      setDeletingSubscriptionId(null)
     }
   }
 
@@ -395,10 +441,23 @@ export default function AdminSubscriptionsPage() {
                         </div>
                         <p className="mt-1 text-sm text-slate-600">{plan.description}</p>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => openEditPlan(plan)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openEditPlan(plan)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={plan.isFree || deletingPlanId === plan.id}
+                          onClick={() => void deletePlan(plan.id)}
+                        >
+                          {deletingPlanId === plan.id ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Delete
+                        </Button>
+                      </div>
                     </div>
 
                     <p className="mt-4 text-2xl font-bold text-slate-900">
@@ -477,6 +536,17 @@ export default function AdminSubscriptionsPage() {
                               <SelectItem value="cancelled">Cancel</SelectItem>
                             </SelectContent>
                           </Select>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={deletingSubscriptionId === subscription.id}
+                            onClick={() => void deleteSubscription(subscription.id)}
+                          >
+                            {deletingSubscriptionId === subscription.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : null}
+                            Delete
+                          </Button>
                           {busy ? <Loader2 className="h-4 w-4 animate-spin text-slate-500" /> : null}
                         </div>
                       </div>

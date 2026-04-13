@@ -27,7 +27,6 @@ import {
   updateProperty,
   updatePropertyApproval,
 } from '@/lib/server/properties/repository'
-import { seededProperties } from '@/lib/server/properties/seed-data'
 
 const propertySchema = z.object({
   title: z.string().trim().optional().default(''),
@@ -215,39 +214,6 @@ function buildReferenceCode(input: PropertyUpsertInput) {
   }
 
   return `ULO-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-}
-
-export async function seedPropertiesIfNeeded() {
-  const currentCount = await countProperties()
-
-  if (currentCount > 0) {
-    return
-  }
-
-  for (const seed of seededProperties) {
-    await createProperty({
-      id: randomUUID(),
-      ...seed,
-      estate: seed.estate ?? null,
-      latitude: seed.latitude ?? null,
-      longitude: seed.longitude ?? null,
-      videoUrl: seed.videoUrl ?? null,
-      documentInfo: seed.documentInfo ?? null,
-      verificationStatus: seed.verificationStatus ?? 'not_requested',
-      featured: seed.featured ?? false,
-      referenceCode: buildReferenceCode(seed),
-      approvalStatus: 'approved',
-      createdByUserId: 'system-seed',
-      createdByName: null,
-      createdByEmail: null,
-      createdByRole: null,
-      approvedByUserId: 'system-seed',
-      approvedAt: new Date().toISOString(),
-      rejectionReason: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
-  }
 }
 
 export async function listPropertiesForScope(scope: PropertyScope, filters: PropertyListFilters, actor?: AuthUser | null) {

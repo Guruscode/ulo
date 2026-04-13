@@ -151,6 +151,25 @@ export async function updateSubscriptionPlan(id: string, input: Partial<Omit<Sub
   return findSubscriptionPlanById(id)
 }
 
+export async function countSubscriptionsForPlan(planId: string) {
+  await initializeDatabase()
+  const db = getDbClient()
+  const result = await db.execute({
+    sql: `SELECT COUNT(*) AS count FROM user_subscriptions WHERE plan_id = ?`,
+    args: [planId],
+  })
+  return Number(result.rows[0]?.count ?? 0)
+}
+
+export async function deleteSubscriptionPlan(id: string) {
+  await initializeDatabase()
+  const db = getDbClient()
+  await db.execute({
+    sql: `DELETE FROM subscription_plans WHERE id = ?`,
+    args: [id],
+  })
+}
+
 export async function createUserSubscription(input: {
   userId: string
   planId: string
@@ -293,4 +312,13 @@ export async function updateUserSubscription(id: string, input: Partial<Pick<Use
     args: [next.status, next.startsAt, next.endsAt, id],
   })
   return findUserSubscriptionById(id)
+}
+
+export async function deleteUserSubscription(id: string) {
+  await initializeDatabase()
+  const db = getDbClient()
+  await db.execute({
+    sql: `DELETE FROM user_subscriptions WHERE id = ?`,
+    args: [id],
+  })
 }

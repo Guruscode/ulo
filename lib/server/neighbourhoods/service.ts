@@ -52,11 +52,6 @@ export async function listNeighbourhoods() {
   return listNeighbourhoodRecords()
 }
 
-export async function seedNeighbourhoodsIfNeeded() {
-  const { seedNeighbourhoodsIfNeeded } = await import('./seed')
-  await seedNeighbourhoodsIfNeeded()
-}
-
 export async function getNeighbourhoodBySlug(slug: string) {
   const neighbourhood = await getNeighbourhoodRecordBySlug(slug)
   if (!neighbourhood) {

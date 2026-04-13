@@ -28,7 +28,6 @@ import {
   updateHotelBookingPaymentReceipt,
   updateHotelBookingStatus,
 } from '@/lib/server/hotels/repository'
-import { seededHotels } from '@/lib/server/hotels/seed-data'
 
 const roomSchema = z.object({
   id: z.string().trim().optional().nullable(),
@@ -132,26 +131,6 @@ function ensureCanManageHotels(actor: AuthUser) {
 
   if (actor.approvalStatus !== 'approved') {
     throw new ApiError(403, 'ACCOUNT_PENDING_APPROVAL', 'Your account must be approved before managing hotels.')
-  }
-}
-
-export async function seedHotelsIfNeeded() {
-  const currentCount = await countHotels()
-  if (currentCount > 0) return
-
-  for (const hotel of seededHotels) {
-    const slug = await resolveUniqueSlug(hotel.name)
-    await createHotel({
-      id: randomUUID(),
-      slug,
-      createdByUserId: 'system-seed',
-      approvalStatus: 'approved',
-      approvedByUserId: 'system-seed',
-      approvedAt: new Date().toISOString(),
-      rejectionReason: null,
-      featured: hotel.featured ?? false,
-      ...hotel,
-    })
   }
 }
 

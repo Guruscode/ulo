@@ -33,6 +33,12 @@ export function updateSubscriptionPlanRequest(id: string, payload: PlanPayload) 
   })
 }
 
+export function deleteSubscriptionPlanRequest(id: string) {
+  return apiRequest(`/api/subscription-plans/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 export function listSubscriptionsRequest() {
   return apiRequest<{ subscriptions: UserSubscriptionRecord[] }>('/api/subscriptions', { method: 'GET' })
 }
@@ -102,5 +108,11 @@ export function updateAdminSubscriptionRequest(
   return apiRequest<{ subscription: UserSubscriptionRecord }>(`/api/admin/subscriptions/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  })
+}
+
+export function deleteAdminSubscriptionRequest(id: string) {
+  return apiRequest(`/api/admin/subscriptions/${id}`, {
+    method: 'DELETE',
   })
 }
