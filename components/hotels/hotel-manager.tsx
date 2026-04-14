@@ -39,6 +39,7 @@ import {
 } from '@/lib/client/hotels-client'
 import { formatHotelPrice } from '@/lib/hotels/presentation'
 import type { HotelBookingRecord, HotelRecord, HotelUpsertInput } from '@/lib/hotels/types'
+import { cn } from '@/lib/utils'
 import { FileUpload } from '@/components/ui/file-upload';
 import { STATES, CITIES_BY_STATE, type State } from '@/lib/properties/nigeria-locations';
 
@@ -76,6 +77,13 @@ type HotelForm = {
   status: 'active' | 'inactive' | 'pending'
   rooms: RoomForm[]
 }
+
+type ValidationIssue = {
+  path?: Array<string | number>
+  message: string
+}
+
+type HotelFieldErrors = Record<string, string[]>
 
 const EMPTY_ROOM: RoomForm = {
   name: '',
@@ -192,6 +200,42 @@ function approvalClass(status: HotelRecord['approvalStatus']) {
   }
 }
 
+function pathToKey(path: Array<string | number>) {
+  return path.map(String).join('.')
+}
+
+function getHotelValidationErrors(error: ApiClientError) {
+  const details = error.details as
+    | {
+        fieldErrors?: Record<string, string[] | undefined>
+        formErrors?: string[]
+        issues?: ValidationIssue[]
+      }
+    | undefined
+
+  const fieldErrors: HotelFieldErrors = {}
+
+  for (const issue of details?.issues ?? []) {
+    const path = Array.isArray(issue.path) ? issue.path : []
+    const key = path.length > 0 ? pathToKey(path) : '_form'
+    fieldErrors[key] = [...(fieldErrors[key] ?? []), issue.message]
+  }
+
+  for (const [field, messages] of Object.entries(details?.fieldErrors ?? {})) {
+    if (!messages?.length || fieldErrors[field]?.length) continue
+    fieldErrors[field] = messages
+  }
+
+  if ((details?.formErrors ?? []).length > 0) {
+    fieldErrors._form = [...(fieldErrors._form ?? []), ...(details?.formErrors ?? [])]
+  }
+
+  return {
+    message: error.message,
+    fieldErrors,
+  }
+}
+
 export function HotelManager({ mode }: { mode: HotelManagerMode }) {
   const [hotels, setHotels] = useState<HotelRecord[]>([])
   const [bookings, setBookings] = useState<HotelBookingRecord[]>([])
@@ -204,8 +248,28 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
   const [form, setForm] = useState<HotelForm>(EMPTY_FORM)
   const [openForm, setOpenForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<HotelFieldErrors>({})
   const [actingHotelId, setActingHotelId] = useState<string | null>(null)
   const [actingBookingId, setActingBookingId] = useState<string | null>(null)
+
+  const getFieldError = (field: string) => fieldErrors[field]?.[0] ?? ''
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
+  const clearErrors = (...fields: string[]) => {
+    setFormError('')
+    for (const field of fields) {
+      clearFieldError(field)
+    }
+  }
 
   const loadData = async () => {
     setLoading(true)
@@ -237,18 +301,24 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
   const openCreate = () => {
     setEditingHotel(null)
     setForm(EMPTY_FORM)
+    setFormError('')
+    setFieldErrors({})
     setOpenForm(true)
   }
 
   const openEdit = (hotel: HotelRecord) => {
     setEditingHotel(hotel)
     setForm(toFormState(hotel))
+    setFormError('')
+    setFieldErrors({})
     setOpenForm(true)
   }
 
   const closeForm = () => {
     setEditingHotel(null)
     setForm(EMPTY_FORM)
+    setFormError('')
+    setFieldErrors({})
     setOpenForm(false)
   }
 
@@ -276,6 +346,8 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
 
   const saveHotel = async () => {
     setSaving(true)
+    setFormError('')
+    setFieldErrors({})
     try {
       const payload = toPayload(form)
       const sanitizedPayload =
@@ -296,12 +368,21 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
       closeForm()
       await loadData()
     } catch (error) {
+      if (error instanceof ApiClientError && error.code === 'VALIDATION_ERROR') {
+        const validation = getHotelValidationErrors(error)
+        setFormError(validation.message)
+        setFieldErrors(validation.fieldErrors)
+        toast.error(validation.message)
+        return
+      }
       if (error instanceof ApiClientError && error.code === 'SUBSCRIPTION_LIMIT_REACHED') {
+        setFormError(error.message)
         toast.error(error.message)
         return
       }
       const message =
         error instanceof ApiClientError ? error.message : 'Unable to save the hotel right now.'
+      setFormError(message)
       toast.error(message)
     } finally {
       setSaving(false)
@@ -509,8 +590,8 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
           </DialogHeader>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2"><Label>Hotel Name</Label><Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></div>
-            <div className="space-y-2"><Label>State</Label><Select value={form.state} onValueChange={(value) => setForm({ ...form, state: value, city: '' })}>
+            <div className="space-y-2"><Label>Hotel Name</Label>{getFieldError('name') ? <p className="text-sm text-red-600">{getFieldError('name')}</p> : null}<Input className={cn(getFieldError('name') && 'border-red-500 focus-visible:ring-red-500')} value={form.name} onChange={(event) => { clearErrors('name'); setForm({ ...form, name: event.target.value }) }} /></div>
+            <div className="space-y-2"><Label>State</Label>{getFieldError('location') ? <p className="text-sm text-red-600">{getFieldError('location')}</p> : null}<Select value={form.state} onValueChange={(value) => { clearErrors('location'); setForm({ ...form, state: value, city: '' }) }}>
               <SelectTrigger>
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
@@ -522,8 +603,8 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                 ))}
               </SelectContent>
             </Select></div>
-            <div className="space-y-2"><Label>City</Label><Select value={form.city} onValueChange={(value) => setForm({ ...form, city: value })}>
-              <SelectTrigger>
+            <div className="space-y-2"><Label>City</Label>{getFieldError('location') ? <p className="text-sm text-red-600">{getFieldError('location')}</p> : null}<Select value={form.city} onValueChange={(value) => { clearErrors('location'); setForm({ ...form, city: value }) }}>
+              <SelectTrigger className={cn(getFieldError('location') && 'border-red-500 focus:ring-red-500')}>
                 <SelectValue placeholder="Select city" />
               </SelectTrigger>
               <SelectContent>
@@ -535,18 +616,18 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
               </SelectContent>
             </Select>
             </div>
-            <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea rows={4} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></div>
-            <div className="space-y-2"><Label>Price per Night</Label><Input type="number" value={form.priceValue} onChange={(event) => setForm({ ...form, priceValue: event.target.value })} /></div>
+            <div className="space-y-2 md:col-span-2"><Label>Description</Label>{getFieldError('description') ? <p className="text-sm text-red-600">{getFieldError('description')}</p> : null}<Textarea className={cn(getFieldError('description') && 'border-red-500 focus-visible:ring-red-500')} rows={4} value={form.description} onChange={(event) => { clearErrors('description'); setForm({ ...form, description: event.target.value }) }} /></div>
+            <div className="space-y-2"><Label>Price per Night</Label>{getFieldError('priceValue') ? <p className="text-sm text-red-600">{getFieldError('priceValue')}</p> : null}<Input className={cn(getFieldError('priceValue') && 'border-red-500 focus-visible:ring-red-500')} type="number" value={form.priceValue} onChange={(event) => { clearErrors('priceValue'); setForm({ ...form, priceValue: event.target.value }) }} /></div>
             {mode === 'admin' ? (
-              <div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as HotelForm['status'] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="pending">Pending</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(value) => { clearErrors('status'); setForm({ ...form, status: value as HotelForm['status'] }) }}><SelectTrigger className={cn(getFieldError('status') && 'border-red-500 focus:ring-red-500')}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="pending">Pending</SelectItem></SelectContent></Select>{getFieldError('status') ? <p className="text-sm text-red-600">{getFieldError('status')}</p> : null}</div>
             ) : null}
-            <div className="space-y-2 md:col-span-2"><Label>Amenities</Label><Textarea rows={3} value={form.amenities} onChange={(event) => setForm({ ...form, amenities: event.target.value })} placeholder="Free WiFi, Restaurant, Pool" /></div>
-            <div className="space-y-2"><Label>Phone</Label><Input value={form.contactPhone} onChange={(event) => setForm({ ...form, contactPhone: event.target.value })} /></div>
-            <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.contactEmail} onChange={(event) => setForm({ ...form, contactEmail: event.target.value })} /></div>
-            <div className="space-y-2 md:col-span-2"><Label>Address</Label><Input value={form.contactAddress} onChange={(event) => setForm({ ...form, contactAddress: event.target.value })} /></div>
-            <div className="space-y-2"><Label>Bank Name</Label><Input value={form.bankName} onChange={(event) => setForm({ ...form, bankName: event.target.value })} /></div>
-            <div className="space-y-2"><Label>Account Name</Label><Input value={form.bankAccountName} onChange={(event) => setForm({ ...form, bankAccountName: event.target.value })} /></div>
-            <div className="space-y-2 md:col-span-2"><Label>Account Number</Label><Input value={form.bankAccountNumber} onChange={(event) => setForm({ ...form, bankAccountNumber: event.target.value })} /></div>
+            <div className="space-y-2 md:col-span-2"><Label>Amenities</Label>{getFieldError('amenities') ? <p className="text-sm text-red-600">{getFieldError('amenities')}</p> : null}<Textarea className={cn(getFieldError('amenities') && 'border-red-500 focus-visible:ring-red-500')} rows={3} value={form.amenities} onChange={(event) => { clearErrors('amenities'); setForm({ ...form, amenities: event.target.value }) }} placeholder="Free WiFi, Restaurant, Pool" /></div>
+            <div className="space-y-2"><Label>Phone</Label>{getFieldError('contactPhone') ? <p className="text-sm text-red-600">{getFieldError('contactPhone')}</p> : null}<Input className={cn(getFieldError('contactPhone') && 'border-red-500 focus-visible:ring-red-500')} value={form.contactPhone} onChange={(event) => { clearErrors('contactPhone'); setForm({ ...form, contactPhone: event.target.value }) }} /></div>
+            <div className="space-y-2"><Label>Email</Label>{getFieldError('contactEmail') ? <p className="text-sm text-red-600">{getFieldError('contactEmail')}</p> : null}<Input className={cn(getFieldError('contactEmail') && 'border-red-500 focus-visible:ring-red-500')} type="email" value={form.contactEmail} onChange={(event) => { clearErrors('contactEmail'); setForm({ ...form, contactEmail: event.target.value }) }} /></div>
+            <div className="space-y-2 md:col-span-2"><Label>Address</Label>{getFieldError('contactAddress') ? <p className="text-sm text-red-600">{getFieldError('contactAddress')}</p> : null}<Input className={cn(getFieldError('contactAddress') && 'border-red-500 focus-visible:ring-red-500')} value={form.contactAddress} onChange={(event) => { clearErrors('contactAddress'); setForm({ ...form, contactAddress: event.target.value }) }} /></div>
+            <div className="space-y-2"><Label>Bank Name</Label>{getFieldError('bankName') ? <p className="text-sm text-red-600">{getFieldError('bankName')}</p> : null}<Input className={cn(getFieldError('bankName') && 'border-red-500 focus-visible:ring-red-500')} value={form.bankName} onChange={(event) => { clearErrors('bankName'); setForm({ ...form, bankName: event.target.value }) }} /></div>
+            <div className="space-y-2"><Label>Account Name</Label>{getFieldError('bankAccountName') ? <p className="text-sm text-red-600">{getFieldError('bankAccountName')}</p> : null}<Input className={cn(getFieldError('bankAccountName') && 'border-red-500 focus-visible:ring-red-500')} value={form.bankAccountName} onChange={(event) => { clearErrors('bankAccountName'); setForm({ ...form, bankAccountName: event.target.value }) }} /></div>
+            <div className="space-y-2 md:col-span-2"><Label>Account Number</Label>{getFieldError('bankAccountNumber') ? <p className="text-sm text-red-600">{getFieldError('bankAccountNumber')}</p> : null}<Input className={cn(getFieldError('bankAccountNumber') && 'border-red-500 focus-visible:ring-red-500')} value={form.bankAccountNumber} onChange={(event) => { clearErrors('bankAccountNumber'); setForm({ ...form, bankAccountNumber: event.target.value }) }} /></div>
             {mode === 'admin' ? (
               <div className="space-y-2 md:col-span-2">
                 <div className="flex items-center justify-between rounded-lg border px-4 py-3">
@@ -561,6 +642,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
           </div>
 
           <div className="space-y-4">
+            {getFieldError('images') ? <p className="text-sm text-red-600">{getFieldError('images')}</p> : null}
             <div className="grid gap-4 md:grid-cols-2">
               {form.images.map((image, index) => (
                 <div key={index} className="space-y-2">
@@ -585,6 +667,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                       accept="image/*"
                       maxSizeMb={4}
                       onUpload={(url) => {
+                        clearErrors('images', `images.${index}`)
                         const next = [...form.images]
                         next[index] = url
                         setForm({ ...form, images: next })
@@ -592,6 +675,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                     />
                     {image ? <img src={image} alt="" className="h-20 w-20 rounded object-cover" /> : null}
                   </div>
+                  {getFieldError(`images.${index}`) ? <p className="text-sm text-red-600">{getFieldError(`images.${index}`)}</p> : null}
                 </div>
               ))}
             </div>
@@ -613,6 +697,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                 Add Room
               </Button>
             </div>
+            {getFieldError('rooms') ? <p className="text-sm text-red-600">{getFieldError('rooms')}</p> : null}
             <div className="space-y-4">
               {form.rooms.map((room, index) => (
                 <Card key={`${room.id || 'new'}-${index}`} className="p-4">
@@ -631,15 +716,16 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                     ) : null}
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2"><Label>Room Name</Label><Input value={room.name} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, name: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
-                    <div className="space-y-2"><Label>Room Price</Label><Input type="number" value={room.priceValue} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, priceValue: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
-                    <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea rows={3} value={room.description} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, description: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
-                    <div className="space-y-2"><Label>Max Guests</Label><Input type="number" value={room.maxGuests} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, maxGuests: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
-                    <div className="space-y-2"><Label>Bed Type</Label><Input value={room.bedType} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, bedType: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
-                    <div className="space-y-2"><Label>Room Size</Label><Input value={room.size} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, size: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
-                    <div className="space-y-2"><Label>Room Amenities</Label><Input value={room.amenities} onChange={(event) => { const next = [...form.rooms]; next[index] = { ...room, amenities: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
+                    <div className="space-y-2"><Label>Room Name</Label>{getFieldError(`rooms.${index}.name`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.name`)}</p> : null}<Input className={cn(getFieldError(`rooms.${index}.name`) && 'border-red-500 focus-visible:ring-red-500')} value={room.name} onChange={(event) => { clearErrors(`rooms.${index}.name`); const next = [...form.rooms]; next[index] = { ...room, name: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
+                    <div className="space-y-2"><Label>Room Price</Label>{getFieldError(`rooms.${index}.priceValue`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.priceValue`)}</p> : null}<Input className={cn(getFieldError(`rooms.${index}.priceValue`) && 'border-red-500 focus-visible:ring-red-500')} type="number" value={room.priceValue} onChange={(event) => { clearErrors(`rooms.${index}.priceValue`); const next = [...form.rooms]; next[index] = { ...room, priceValue: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
+                    <div className="space-y-2 md:col-span-2"><Label>Description</Label>{getFieldError(`rooms.${index}.description`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.description`)}</p> : null}<Textarea className={cn(getFieldError(`rooms.${index}.description`) && 'border-red-500 focus-visible:ring-red-500')} rows={3} value={room.description} onChange={(event) => { clearErrors(`rooms.${index}.description`); const next = [...form.rooms]; next[index] = { ...room, description: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
+                    <div className="space-y-2"><Label>Max Guests</Label>{getFieldError(`rooms.${index}.maxGuests`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.maxGuests`)}</p> : null}<Input className={cn(getFieldError(`rooms.${index}.maxGuests`) && 'border-red-500 focus-visible:ring-red-500')} type="number" value={room.maxGuests} onChange={(event) => { clearErrors(`rooms.${index}.maxGuests`); const next = [...form.rooms]; next[index] = { ...room, maxGuests: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
+                    <div className="space-y-2"><Label>Bed Type</Label>{getFieldError(`rooms.${index}.bedType`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.bedType`)}</p> : null}<Input className={cn(getFieldError(`rooms.${index}.bedType`) && 'border-red-500 focus-visible:ring-red-500')} value={room.bedType} onChange={(event) => { clearErrors(`rooms.${index}.bedType`); const next = [...form.rooms]; next[index] = { ...room, bedType: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
+                    <div className="space-y-2"><Label>Room Size</Label>{getFieldError(`rooms.${index}.size`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.size`)}</p> : null}<Input className={cn(getFieldError(`rooms.${index}.size`) && 'border-red-500 focus-visible:ring-red-500')} value={room.size} onChange={(event) => { clearErrors(`rooms.${index}.size`); const next = [...form.rooms]; next[index] = { ...room, size: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
+                    <div className="space-y-2"><Label>Room Amenities</Label>{getFieldError(`rooms.${index}.amenities`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.amenities`)}</p> : null}<Input className={cn(getFieldError(`rooms.${index}.amenities`) && 'border-red-500 focus-visible:ring-red-500')} value={room.amenities} onChange={(event) => { clearErrors(`rooms.${index}.amenities`); const next = [...form.rooms]; next[index] = { ...room, amenities: event.target.value }; setForm({ ...form, rooms: next }) }} /></div>
                     <div className="space-y-2">
                       <Label>Room Image</Label>
+                      {getFieldError(`rooms.${index}.images`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.images`)}</p> : null}
                       <div className="flex gap-2">
                         <FileUpload
                           id={`room-image-${index}`}
@@ -648,6 +734,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                           accept="image/*"
                           maxSizeMb={4}
                           onUpload={(url) => {
+                            clearErrors(`rooms.${index}.images`, `rooms.${index}.images.0`)
                             const next = [...form.rooms]
                             next[index] = { ...room, images: [url] }
                             setForm({ ...form, rooms: next })
@@ -657,6 +744,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
                           <img src={room.images[0]} alt="" className="h-20 w-20 rounded object-cover" />
                         ) : null}
                       </div>
+                      {getFieldError(`rooms.${index}.images.0`) ? <p className="text-sm text-red-600">{getFieldError(`rooms.${index}.images.0`)}</p> : null}
                     </div>
                     <div className="flex items-center justify-between rounded-lg border px-4 py-3 md:col-span-2">
                       <div>
@@ -672,6 +760,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
           </div>
 
           <DialogFooter>
+            {formError ? <p className="mr-auto text-sm text-red-600">{formError}</p> : null}
             <Button variant="outline" onClick={closeForm} disabled={saving}>Cancel</Button>
             <Button onClick={() => void saveHotel()} disabled={!canSave || saving}>
               {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : editingHotel ? 'Save Hotel' : 'Create Hotel'}

@@ -32,24 +32,27 @@ import {
 const roomSchema = z.object({
   id: z.string().trim().optional().nullable(),
   name: z.string().trim().min(2),
-  description: z.string().trim().min(10),
+  description: z.string().trim().min(10, 'Room description must be at least 10 characters.'),
   priceValue: z.number().int().positive(),
   maxGuests: z.number().int().min(1),
   bedType: z.string().trim().min(2),
   size: z.string().trim().min(2),
   amenities: z.array(z.string().trim().min(1)).min(1),
-  images: z.array(z.string().trim().url()).min(1),
+  images: z.array(z.string().trim().url()).min(1, 'Upload at least 1 image.'),
   available: z.boolean(),
 })
 
 const hotelSchema = z.object({
   name: z.string().trim().min(3),
   location: z.string().trim().min(2),
-  description: z.string().trim().min(20),
+  description: z.string().trim().min(20, 'Description must be at least 20 characters.'),
   rating: z.number().min(0).max(5),
   reviewCount: z.number().int().min(0),
   priceValue: z.number().int().positive(),
-  images: z.array(z.string().trim().url()).min(4).max(4),
+  images: z
+    .array(z.string().trim().url())
+    .min(4, 'Upload exactly 4 images.')
+    .max(4, 'Upload exactly 4 images.'),
   amenities: z.array(z.string().trim().min(1)).min(1),
   contactPhone: z.string().trim().min(7),
   contactEmail: z.string().trim().email(),
@@ -74,6 +77,17 @@ const bookingSchema = z.object({
   checkOutDate: z.string().trim().min(1),
   departureTime: z.string().trim().optional().nullable(),
 })
+
+function formatValidationDetails(error: z.ZodError) {
+  return {
+    fieldErrors: error.flatten().fieldErrors,
+    formErrors: error.flatten().formErrors,
+    issues: error.issues.map((issue) => ({
+      path: issue.path,
+      message: issue.message,
+    })),
+  }
+}
 
 function slugify(value: string) {
   return value
@@ -156,7 +170,7 @@ export async function createHotelForActor(input: unknown, actor: AuthUser) {
   await assertListingCapacity(actor, 'hotel', await countHotels(actor.id))
   const parsed = hotelSchema.safeParse(input)
   if (!parsed.success) {
-    throw new ApiError(400, 'VALIDATION_ERROR', 'Please correct the hotel form fields.', parsed.error.flatten())
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Please correct the hotel form fields.', formatValidationDetails(parsed.error))
   }
 
   const slug = await resolveUniqueSlug(parsed.data.name)
@@ -191,7 +205,7 @@ export async function updateHotelForActor(id: string, input: unknown, actor: Aut
   ensureCanManageHotels(actor)
   const parsed = hotelSchema.safeParse(input)
   if (!parsed.success) {
-    throw new ApiError(400, 'VALIDATION_ERROR', 'Please correct the hotel form fields.', parsed.error.flatten())
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Please correct the hotel form fields.', formatValidationDetails(parsed.error))
   }
 
   const existing = await findHotelById(id)

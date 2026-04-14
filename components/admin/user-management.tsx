@@ -66,8 +66,6 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
         localGovernment: nextUser.localGovernment || null,
         accountType: (nextUser.accountType || 'user') as AccountType,
         approvalStatus: (nextUser.approvalStatus || 'pending') as ApprovalStatus,
-        identityType: nextUser.accountType === 'user' ? null : 'bvn',
-        identityNumber: nextUser.identityNumber || null,
         isActive: nextUser.status !== 'disabled',
         propertyListingLimit: nextUser.propertyListingLimit ?? null,
         hotelListingLimit: nextUser.hotelListingLimit ?? null,
@@ -205,7 +203,6 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
                 <p><span className="font-medium text-slate-900">Status:</span> {viewUser.status}</p>
                 <p><span className="font-medium text-slate-900">Address:</span> {viewUser.address || 'N/A'}</p>
                 <p><span className="font-medium text-slate-900">State / LGA:</span> {viewUser.state || 'N/A'} / {viewUser.localGovernment || 'N/A'}</p>
-                <p><span className="font-medium text-slate-900">Identity:</span> {viewUser.identityType ? `${viewUser.identityType.toUpperCase()} - ${viewUser.identityNumber}` : 'N/A'}</p>
                 <p><span className="font-medium text-slate-900">Property Listing Limit:</span> {viewUser.propertyListingLimit == null ? 'Use subscription/default access' : viewUser.propertyListingLimit < 0 ? 'Unlimited' : viewUser.propertyListingLimit}</p>
                 <p><span className="font-medium text-slate-900">Hotel Listing Limit:</span> {viewUser.hotelListingLimit == null ? 'Use subscription/default access' : viewUser.hotelListingLimit < 0 ? 'Unlimited' : viewUser.hotelListingLimit}</p>
               </div>
@@ -225,8 +222,6 @@ export function UserManagement({ mode }: { mode: UserManagementMode }) {
                 <div className="space-y-2"><Label>Phone</Label><Input value={editUser.phone || ''} onChange={(event) => setEditUser({ ...editUser, phone: event.target.value })} /></div>
                 <div className="space-y-2"><Label>Account Type</Label><Select value={editUser.accountType || 'user'} onValueChange={(value) => setEditUser({ ...editUser, accountType: value as AccountType })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="user">User</SelectItem><SelectItem value="agent">Agent</SelectItem><SelectItem value="landlord">Landlord</SelectItem><SelectItem value="hotel_manager">Hotel Manager</SelectItem></SelectContent></Select></div>
                 <div className="space-y-2"><Label>Approval</Label><Select value={editUser.approvalStatus || 'pending'} onValueChange={(value) => setEditUser({ ...editUser, approvalStatus: value as ApprovalStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="approved">Approved</SelectItem><SelectItem value="rejected">Rejected</SelectItem></SelectContent></Select></div>
-                <div className="space-y-2"><Label>Identity Type</Label><Input value={editUser.accountType === 'user' ? 'N/A' : 'BVN'} disabled /></div>
-                <div className="space-y-2 md:col-span-2"><Label>Identity Number</Label><Input value={editUser.identityNumber || ''} onChange={(event) => setEditUser({ ...editUser, identityNumber: event.target.value })} disabled={editUser.accountType === 'user'} /></div>
                 <div className="space-y-2 md:col-span-2"><Label>Address</Label><Input value={editUser.address || ''} onChange={(event) => setEditUser({ ...editUser, address: event.target.value })} /></div>
                 <div className="space-y-2"><Label>State</Label><Input value={editUser.state || ''} onChange={(event) => setEditUser({ ...editUser, state: event.target.value })} /></div>
                 <div className="space-y-2"><Label>Local Government</Label><Input value={editUser.localGovernment || ''} onChange={(event) => setEditUser({ ...editUser, localGovernment: event.target.value })} /></div>

@@ -26,6 +26,20 @@ import { ApiClientError } from '@/lib/client/api-error'
 import { resendSignupOtpRequest, signupRequest, verifySignupOtpRequest } from '@/lib/client/auth-client'
 import { CITIES_BY_STATE, STATES, type State } from '@/lib/properties/nigeria-locations'
 
+type SignupFieldError = Partial<{
+  email: string
+  password: string
+  confirmPassword: string
+  agreeToTerms: string
+  otp: string
+  submit: string
+}>
+
+type ValidationDetails = {
+  fieldErrors?: Record<string, string[] | undefined>
+  formErrors?: string[]
+}
+
 export default function SignupPageClient() {
   const router = useRouter()
   const { setUser } = useAuth()
@@ -48,10 +62,34 @@ export default function SignupPageClient() {
   const [otp, setOtp] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isResendingOtp, setIsResendingOtp] = useState(false)
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState<SignupFieldError>({})
   const availableCities = formData.state
     ? CITIES_BY_STATE[formData.state as State] ?? []
     : []
+
+  const getApiValidationErrors = (error: ApiClientError): SignupFieldError | null => {
+    if (error.code === 'EMAIL_ALREADY_IN_USE') {
+      return { email: error.message }
+    }
+
+    if (error.code === 'INVALID_OTP') {
+      return { otp: error.message }
+    }
+
+    if (error.code !== 'VALIDATION_ERROR') {
+      return null
+    }
+
+    const details = error.details as ValidationDetails | undefined
+
+    return {
+      email: details?.fieldErrors?.email?.[0],
+      password: details?.fieldErrors?.password?.[0],
+      agreeToTerms: details?.fieldErrors?.agreeToTerms?.[0],
+      otp: details?.fieldErrors?.otp?.[0],
+      submit: details?.formErrors?.[0],
+    }
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.currentTarget
@@ -61,6 +99,9 @@ export default function SignupPageClient() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }))
+    if (name in errors) {
+      setErrors((prev) => ({ ...prev, [name]: undefined, submit: undefined }))
+    }
   }
 
   const handleStateChange = (state: string) => {
@@ -69,6 +110,7 @@ export default function SignupPageClient() {
       state,
       localGovernment: '',
     }))
+    setErrors((prev) => ({ ...prev, submit: undefined }))
   }
 
   const handleCityChange = (localGovernment: string) => {
@@ -76,19 +118,20 @@ export default function SignupPageClient() {
       ...prev,
       localGovernment,
     }))
+    setErrors((prev) => ({ ...prev, submit: undefined }))
   }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setErrors({})
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      setErrors({ confirmPassword: 'Passwords do not match.' })
       return
     }
 
     if (!formData.agreeToTerms) {
-      setError('You must agree to the terms and conditions')
+      setErrors({ agreeToTerms: 'You must agree to the terms and conditions.' })
       return
     }
 
@@ -112,7 +155,11 @@ export default function SignupPageClient() {
     } catch (err) {
       const message =
         err instanceof ApiClientError ? err.message : 'Unable to send your verification code right now.'
-      setError(message)
+      setErrors(
+        err instanceof ApiClientError
+          ? { submit: message, ...getApiValidationErrors(err) }
+          : { submit: message }
+      )
       toast.error(message)
     } finally {
       setIsLoading(false)
@@ -121,11 +168,11 @@ export default function SignupPageClient() {
 
   const handleResendOtp = async () => {
     if (!verificationToken) {
-      setError('Start signup again to request a new verification code.')
+      setErrors({ submit: 'Start signup again to request a new verification code.' })
       return
     }
 
-    setError('')
+    setErrors({})
     setIsResendingOtp(true)
 
     try {
@@ -136,7 +183,11 @@ export default function SignupPageClient() {
     } catch (err) {
       const message =
         err instanceof ApiClientError ? err.message : 'Unable to resend your verification code right now.'
-      setError(message)
+      setErrors(
+        err instanceof ApiClientError
+          ? { submit: message, ...getApiValidationErrors(err) }
+          : { submit: message }
+      )
       toast.error(message)
     } finally {
       setIsResendingOtp(false)
@@ -145,10 +196,10 @@ export default function SignupPageClient() {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setErrors({})
 
     if (otp.length !== 6) {
-      setError('Enter the 6-digit verification code.')
+      setErrors({ otp: 'Enter the 6-digit verification code.' })
       return
     }
 
@@ -163,7 +214,11 @@ export default function SignupPageClient() {
     } catch (err) {
       const message =
         err instanceof ApiClientError ? err.message : 'Unable to verify your code right now.'
-      setError(message)
+      setErrors(
+        err instanceof ApiClientError
+          ? { submit: message, ...getApiValidationErrors(err) }
+          : { submit: message }
+      )
       toast.error(message)
     } finally {
       setIsLoading(false)
@@ -214,12 +269,6 @@ export default function SignupPageClient() {
           </p>
 
           <form onSubmit={step === 'details' ? handleSignup : handleVerifyOtp} className="space-y-5">
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-
             {step === 'details' ? (
               <>
                 <div>
@@ -230,6 +279,9 @@ export default function SignupPageClient() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                   <Input type="email" name="email" placeholder="you@example.com" value={formData.email} onChange={handleInputChange} required className="h-11 bg-gray-50 border-gray-200 focus:bg-white" />
+                  {errors.email ? (
+                    <p className="mt-2 text-sm text-red-600">{errors.email}</p>
+                  ) : null}
                 </div>
 
                 <div>
@@ -310,6 +362,9 @@ export default function SignupPageClient() {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                  {errors.password ? (
+                    <p className="mt-2 text-sm text-red-600">{errors.password}</p>
+                  ) : null}
                   <p className="text-xs text-gray-500 mt-2">Minimum 8 characters with uppercase, lowercase, and numbers</p>
                 </div>
 
@@ -321,6 +376,9 @@ export default function SignupPageClient() {
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                  {errors.confirmPassword ? (
+                    <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>
+                  ) : null}
                 </div>
 
                 <div className="flex items-start gap-2">
@@ -329,7 +387,10 @@ export default function SignupPageClient() {
                     name="agreeToTerms"
                     checked={formData.agreeToTerms}
                     onCheckedChange={(checked) =>
-                      setFormData((prev) => ({ ...prev, agreeToTerms: checked as boolean }))
+                      {
+                        setFormData((prev) => ({ ...prev, agreeToTerms: checked as boolean }))
+                        setErrors((prev) => ({ ...prev, agreeToTerms: undefined, submit: undefined }))
+                      }
                     }
                     className="mt-1 border-gray-300"
                   />
@@ -340,6 +401,13 @@ export default function SignupPageClient() {
                     <Link href="#" className="text-gray-900 hover:underline">Privacy Policy</Link>
                   </label>
                 </div>
+                {errors.agreeToTerms ? (
+                  <p className="-mt-3 text-sm text-red-600">{errors.agreeToTerms}</p>
+                ) : null}
+
+                {errors.submit ? (
+                  <p className="text-sm text-red-600">{errors.submit}</p>
+                ) : null}
 
                 <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white font-medium text-base rounded-lg">
                   {isLoading ? 'Sending code...' : 'Send Verification Code'}
@@ -349,7 +417,14 @@ export default function SignupPageClient() {
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">Verification Code</label>
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                  <InputOTP
+                    maxLength={6}
+                    value={otp}
+                    onChange={(value) => {
+                      setOtp(value)
+                      setErrors((prev) => ({ ...prev, otp: undefined, submit: undefined }))
+                    }}
+                  >
                     <InputOTPGroup className="w-full justify-between">
                       <InputOTPSlot index={0} className="h-12 w-12 rounded-md border" />
                       <InputOTPSlot index={1} className="h-12 w-12 rounded-md border" />
@@ -359,8 +434,15 @@ export default function SignupPageClient() {
                       <InputOTPSlot index={5} className="h-12 w-12 rounded-md border" />
                     </InputOTPGroup>
                   </InputOTP>
+                  {errors.otp ? (
+                    <p className="mt-3 text-sm text-red-600">{errors.otp}</p>
+                  ) : null}
                   <p className="mt-3 text-sm text-gray-500">Enter the 6-digit code sent to your email.</p>
                 </div>
+
+                {errors.submit ? (
+                  <p className="text-sm text-red-600">{errors.submit}</p>
+                ) : null}
 
                 <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white font-medium text-base rounded-lg">
                   {isLoading ? 'Verifying...' : 'Verify and Create Account'}
@@ -383,7 +465,7 @@ export default function SignupPageClient() {
                   onClick={() => {
                     setStep('details')
                     setOtp('')
-                    setError('')
+                    setErrors({})
                   }}
                 >
                   Change Details

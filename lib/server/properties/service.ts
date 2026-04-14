@@ -56,8 +56,8 @@ const propertySchema = z.object({
   features: z.array(z.string().trim().min(1)).min(1, 'Add at least one feature.'),
   imageUrls: z
     .array(z.string().trim().url('Each image must be a valid URL.'))
-    .min(4, 'Exactly 4 property images are required.')
-    .max(4, 'Exactly 4 property images are required.'),
+    .min(4, 'Upload exactly 4 images.')
+    .max(4, 'Upload exactly 4 images.'),
   videoUrl: z.string().trim().url('Video URL must be valid.').nullable().optional().or(z.literal('')),
   referenceCode: z.string().trim().optional().nullable(),
   documentInfo: z.string().trim().optional().nullable(),

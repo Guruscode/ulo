@@ -23,8 +23,6 @@ export function updateAdminUserRequest(id: string, input: {
   localGovernment?: string | null
   accountType: 'user' | 'agent' | 'landlord' | 'hotel_manager'
   approvalStatus: 'pending' | 'approved' | 'rejected'
-  identityType?: 'bvn' | null
-  identityNumber?: string | null
   isActive: boolean
   propertyListingLimit?: number | null
   hotelListingLimit?: number | null

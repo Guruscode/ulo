@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { FileUpload } from '@/components/ui/file-upload'
 import { ApiClientError } from '@/lib/client/api-error'
 import { DEFAULT_PROPERTY_IMAGE, resolveImageUrl } from '@/lib/media/defaults'
+import { cn } from '@/lib/utils'
 import {
   createPropertyRequest,
   deletePropertyRequest,
@@ -42,8 +43,12 @@ import { formatPropertyPrice } from '@/lib/properties/presentation'
 import { STATES, CITIES_BY_STATE, type State } from '@/lib/properties/nigeria-locations'
 
 type PropertyManagerMode = 'dashboard' | 'admin'
-type PropertyFieldKey = keyof PropertyFormState
-type PropertyFieldErrors = Partial<Record<PropertyFieldKey, string[]>>
+type ValidationIssue = {
+  path?: Array<string | number>
+  message: string
+}
+
+type PropertyFieldErrors = Record<string, string[]>
 
 type PropertyFormState = {
   title: string
@@ -206,7 +211,6 @@ function toRequestPayload(form: PropertyFormState): PropertyUpsertInput {
       .split(',')
       .map((feature) => feature.trim())
       .filter(Boolean),
-    imageUrls: form.imageUrls.map((url) => url.trim()),
     videoUrl: form.videoUrl.trim() || null,
     referenceCode: form.referenceCode.trim() || null,
     imageUrls: form.imageUrls.map((url) => url.trim()).filter(Boolean),
@@ -235,16 +239,39 @@ function approvalBadgeClass(status: PropertyRecord['approvalStatus']) {
   }
 }
 
+function pathToKey(path: Array<string | number>) {
+  return path.map(String).join('.')
+}
+
 function getValidationErrors(error: ApiClientError) {
   const details = error.details as
     | {
         fieldErrors?: Record<string, string[] | undefined>
+        formErrors?: string[]
+        issues?: ValidationIssue[]
       }
     | undefined
 
+  const fieldErrors: PropertyFieldErrors = {}
+
+  for (const issue of details?.issues ?? []) {
+    const path = Array.isArray(issue.path) ? issue.path : []
+    const key = path.length > 0 ? pathToKey(path) : '_form'
+    fieldErrors[key] = [...(fieldErrors[key] ?? []), issue.message]
+  }
+
+  for (const [field, messages] of Object.entries(details?.fieldErrors ?? {})) {
+    if (!messages?.length || fieldErrors[field]?.length) continue
+    fieldErrors[field] = messages
+  }
+
+  if ((details?.formErrors ?? []).length) {
+    fieldErrors._form = [...(fieldErrors._form ?? []), ...(details?.formErrors ?? [])]
+  }
+
   return {
     message: error.message,
-    fieldErrors: (details?.fieldErrors ?? {}) as PropertyFieldErrors,
+    fieldErrors,
   }
 }
 
@@ -263,6 +290,24 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
   const [formError, setFormError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<PropertyFieldErrors>({})
   const [actingPropertyId, setActingPropertyId] = useState<string | null>(null)
+
+  const getFieldError = (field: string) => fieldErrors[field]?.[0] ?? ''
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
+  const clearErrors = (...fields: string[]) => {
+    setFormError('')
+    for (const field of fields) {
+      clearFieldError(field)
+    }
+  }
 
   const steps =
     mode === 'dashboard'
@@ -620,30 +665,15 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
             ))}
           </div>
 
-          {formError ? (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <p className="font-medium text-red-800">{formError}</p>
-              {Object.entries(fieldErrors).length > 0 ? (
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  {Object.entries(fieldErrors).flatMap(([field, messages]) =>
-                    (messages ?? []).map((message, index) => (
-                      <li key={`${field}-${index}`}>
-                        <span className="font-medium">{field}</span>: {message}
-                      </li>
-                    ))
-                  )}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
-
           {formStep === 0 ? (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Property Type</Label>
+                {getFieldError('type') ? <p className="text-sm text-red-600">{getFieldError('type')}</p> : null}
                 <Select
                   value={form.type}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
+                    clearErrors('type', 'pricingPeriod', 'title', 'bedrooms', 'bathrooms', '_form')
                     setForm({
                       ...form,
                       type: value as PropertyFormState['type'],
@@ -652,9 +682,9 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                       bedrooms: value === 'Land' ? '0' : form.bedrooms,
                       bathrooms: value === 'Land' ? '0' : form.bathrooms,
                     })
-                  }
+                  }}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className={cn(getFieldError('type') && 'border-red-500 focus:ring-red-500')}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PROPERTY_TYPES.map((type) => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
@@ -675,14 +705,15 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               {!isLandType(form.type) ? (
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="title">Title</Label>
-                  <Input id="title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
-                  {fieldErrors.title?.[0] ? <p className="text-sm text-red-600">{fieldErrors.title[0]}</p> : null}
+                  {getFieldError('title') ? <p className="text-sm text-red-600">{getFieldError('title')}</p> : null}
+                  <Input id="title" className={cn(getFieldError('title') && 'border-red-500 focus-visible:ring-red-500')} value={form.title} onChange={(event) => { clearErrors('title', '_form'); setForm({ ...form, title: event.target.value }) }} />
                 </div>
               ) : null}
               <div className="space-y-2">
                 <Label>State</Label>
-                <Select value={form.state} onValueChange={(value) => setForm({ ...form, state: value, city: '' })}>
-                  <SelectTrigger>
+                {getFieldError('location') ? <p className="text-sm text-red-600">{getFieldError('location')}</p> : null}
+                <Select value={form.state} onValueChange={(value) => { clearErrors('location', '_form'); setForm({ ...form, state: value, city: '' }) }}>
+                  <SelectTrigger className={cn(getFieldError('location') && 'border-red-500 focus:ring-red-500')}>
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent>
@@ -696,8 +727,9 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               </div>
               <div className="space-y-2">
                 <Label>City</Label>
-                <Select value={form.city} onValueChange={(value) => setForm({ ...form, city: value })}>
-                  <SelectTrigger>
+                {getFieldError('location') ? <p className="text-sm text-red-600">{getFieldError('location')}</p> : null}
+                <Select value={form.city} onValueChange={(value) => { clearErrors('location', '_form'); setForm({ ...form, city: value }) }}>
+                  <SelectTrigger className={cn(getFieldError('location') && 'border-red-500 focus:ring-red-500')}>
                     <SelectValue placeholder="Select city" />
                   </SelectTrigger>
                   <SelectContent>
@@ -711,8 +743,9 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="listedBy">Listed By</Label>
-                <Select value={form.listedBy} onValueChange={(value) => setForm({ ...form, listedBy: value as PropertyFormState['listedBy'] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                {getFieldError('listedBy') ? <p className="text-sm text-red-600">{getFieldError('listedBy')}</p> : null}
+                <Select value={form.listedBy} onValueChange={(value) => { clearErrors('listedBy', '_form'); setForm({ ...form, listedBy: value as PropertyFormState['listedBy'] }) }}>
+                  <SelectTrigger className={cn(getFieldError('listedBy') && 'border-red-500 focus:ring-red-500')}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Agent">Agent</SelectItem>
                     <SelectItem value="Landlord">Landlord</SelectItem>
@@ -721,13 +754,14 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="priceValue">Price</Label>
-                <Input id="priceValue" type="number" value={form.priceValue} onChange={(event) => setForm({ ...form, priceValue: event.target.value })} />
-                {fieldErrors.priceValue?.[0] ? <p className="text-sm text-red-600">{fieldErrors.priceValue[0]}</p> : null}
+                {getFieldError('priceValue') ? <p className="text-sm text-red-600">{getFieldError('priceValue')}</p> : null}
+                <Input id="priceValue" className={cn(getFieldError('priceValue') && 'border-red-500 focus-visible:ring-red-500')} type="number" value={form.priceValue} onChange={(event) => { clearErrors('priceValue', '_form'); setForm({ ...form, priceValue: event.target.value }) }} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Currency</Label>
-                <Select value={form.currency} onValueChange={(value) => setForm({ ...form, currency: value as PropertyFormState['currency'] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                {getFieldError('currency') ? <p className="text-sm text-red-600">{getFieldError('currency')}</p> : null}
+                <Select value={form.currency} onValueChange={(value) => { clearErrors('currency', '_form'); setForm({ ...form, currency: value as PropertyFormState['currency'] }) }}>
+                  <SelectTrigger className={cn(getFieldError('currency') && 'border-red-500 focus:ring-red-500')}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="NGN">NGN</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
@@ -736,8 +770,9 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pricingPeriod">Pricing Period</Label>
-                <Select value={form.pricingPeriod} onValueChange={(value) => setForm({ ...form, pricingPeriod: value as PropertyFormState['pricingPeriod'] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                {getFieldError('pricingPeriod') ? <p className="text-sm text-red-600">{getFieldError('pricingPeriod')}</p> : null}
+                <Select value={form.pricingPeriod} onValueChange={(value) => { clearErrors('pricingPeriod', '_form'); setForm({ ...form, pricingPeriod: value as PropertyFormState['pricingPeriod'] }) }}>
+                  <SelectTrigger className={cn(getFieldError('pricingPeriod') && 'border-red-500 focus:ring-red-500')}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PRICING_PERIOD_OPTIONS[form.type].map((option) => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -748,8 +783,9 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               {mode === 'admin' ? (
                 <div className="space-y-2">
                   <Label htmlFor="status">Listing Status</Label>
-                  <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as PropertyFormState['status'] })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  {getFieldError('status') ? <p className="text-sm text-red-600">{getFieldError('status')}</p> : null}
+                  <Select value={form.status} onValueChange={(value) => { clearErrors('status', '_form'); setForm({ ...form, status: value as PropertyFormState['status'] }) }}>
+                    <SelectTrigger className={cn(getFieldError('status') && 'border-red-500 focus:ring-red-500')}><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
@@ -761,51 +797,57 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               {!isLandType(form.type) ? (
                 <div className="space-y-2">
                   <Label htmlFor="bedrooms">Bedrooms</Label>
-                  <Input id="bedrooms" type="number" value={form.bedrooms} onChange={(event) => setForm({ ...form, bedrooms: event.target.value })} />
+                  {getFieldError('bedrooms') ? <p className="text-sm text-red-600">{getFieldError('bedrooms')}</p> : null}
+                  <Input id="bedrooms" className={cn(getFieldError('bedrooms') && 'border-red-500 focus-visible:ring-red-500')} type="number" value={form.bedrooms} onChange={(event) => { clearErrors('bedrooms', '_form'); setForm({ ...form, bedrooms: event.target.value }) }} />
                 </div>
               ) : null}
               {!isLandType(form.type) ? (
                 <div className="space-y-2">
                   <Label htmlFor="bathrooms">Bathrooms</Label>
-                  <Input id="bathrooms" type="number" step="0.5" value={form.bathrooms} onChange={(event) => setForm({ ...form, bathrooms: event.target.value })} />
+                  {getFieldError('bathrooms') ? <p className="text-sm text-red-600">{getFieldError('bathrooms')}</p> : null}
+                  <Input id="bathrooms" className={cn(getFieldError('bathrooms') && 'border-red-500 focus-visible:ring-red-500')} type="number" step="0.5" value={form.bathrooms} onChange={(event) => { clearErrors('bathrooms', '_form'); setForm({ ...form, bathrooms: event.target.value }) }} />
                 </div>
               ) : null}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="fullAddress">Full Address</Label>
-                <Input id="fullAddress" value={form.fullAddress} onChange={(event) => setForm({ ...form, fullAddress: event.target.value })} />
-                {fieldErrors.fullAddress?.[0] ? <p className="text-sm text-red-600">{fieldErrors.fullAddress[0]}</p> : null}
+                {getFieldError('fullAddress') ? <p className="text-sm text-red-600">{getFieldError('fullAddress')}</p> : null}
+                <Input id="fullAddress" className={cn(getFieldError('fullAddress') && 'border-red-500 focus-visible:ring-red-500')} value={form.fullAddress} onChange={(event) => { clearErrors('fullAddress', '_form'); setForm({ ...form, fullAddress: event.target.value }) }} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="estate">Estate / Area (optional)</Label>
-                <Input id="estate" value={form.estate} onChange={(event) => setForm({ ...form, estate: event.target.value })} placeholder="e.g., Victoria Garden City, Lekki Phase 1" />
+                {getFieldError('estate') ? <p className="text-sm text-red-600">{getFieldError('estate')}</p> : null}
+                <Input id="estate" className={cn(getFieldError('estate') && 'border-red-500 focus-visible:ring-red-500')} value={form.estate} onChange={(event) => { clearErrors('estate', '_form'); setForm({ ...form, estate: event.target.value }) }} placeholder="e.g., Victoria Garden City, Lekki Phase 1" />
               </div>
               {canEditCoordinates ? (
                 <div className="space-y-2">
                   <Label htmlFor="latitude">Latitude <span className="text-xs text-gray-500">(admin edit only)</span></Label>
-                  <Input id="latitude" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} />
+                  {getFieldError('latitude') ? <p className="text-sm text-red-600">{getFieldError('latitude')}</p> : null}
+                  <Input id="latitude" className={cn(getFieldError('latitude') && 'border-red-500 focus-visible:ring-red-500')} value={form.latitude} onChange={(event) => { clearErrors('latitude', '_form'); setForm({ ...form, latitude: event.target.value }) }} />
                 </div>
               ) : null}
               {canEditCoordinates ? (
                 <div className="space-y-2">
                   <Label htmlFor="longitude">Longitude <span className="text-xs text-gray-500">(admin edit only)</span></Label>
-                  <Input id="longitude" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} />
+                  {getFieldError('longitude') ? <p className="text-sm text-red-600">{getFieldError('longitude')}</p> : null}
+                  <Input id="longitude" className={cn(getFieldError('longitude') && 'border-red-500 focus-visible:ring-red-500')} value={form.longitude} onChange={(event) => { clearErrors('longitude', '_form'); setForm({ ...form, longitude: event.target.value }) }} />
                 </div>
               ) : null}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="features">Features</Label>
-                <Textarea id="features" rows={4} value={form.features} onChange={(event) => setForm({ ...form, features: event.target.value })} placeholder="Pool, Gym, Security, Parking" />
-                {fieldErrors.features?.[0] ? <p className="text-sm text-red-600">{fieldErrors.features[0]}</p> : null}
+                {getFieldError('features') ? <p className="text-sm text-red-600">{getFieldError('features')}</p> : null}
+                <Textarea id="features" className={cn(getFieldError('features') && 'border-red-500 focus-visible:ring-red-500')} rows={4} value={form.features} onChange={(event) => { clearErrors('features', '_form'); setForm({ ...form, features: event.target.value }) }} placeholder="Pool, Gym, Security, Parking" />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-                {fieldErrors.description?.[0] ? <p className="text-sm text-red-600">{fieldErrors.description[0]}</p> : null}
+                {getFieldError('description') ? <p className="text-sm text-red-600">{getFieldError('description')}</p> : null}
+                <Textarea id="description" className={cn(getFieldError('description') && 'border-red-500 focus-visible:ring-red-500')} rows={5} value={form.description} onChange={(event) => { clearErrors('description', '_form'); setForm({ ...form, description: event.target.value }) }} />
               </div>
               {mode === 'admin' ? (
                 <div className="space-y-2">
                   <Label htmlFor="verificationStatus">Verification Status</Label>
-                  <Select value={form.verificationStatus} onValueChange={(value) => setForm({ ...form, verificationStatus: value as PropertyFormState['verificationStatus'] })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  {getFieldError('verificationStatus') ? <p className="text-sm text-red-600">{getFieldError('verificationStatus')}</p> : null}
+                  <Select value={form.verificationStatus} onValueChange={(value) => { clearErrors('verificationStatus', '_form'); setForm({ ...form, verificationStatus: value as PropertyFormState['verificationStatus'] }) }}>
+                    <SelectTrigger className={cn(getFieldError('verificationStatus') && 'border-red-500 focus:ring-red-500')}><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="not_requested">Not requested</SelectItem>
                       <SelectItem value="requested">Requested</SelectItem>
@@ -826,7 +868,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
             </div>
           ) : null}
 
-          {formStep === 2 ? (
+              {formStep === 2 ? (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
                 {form.imageUrls.map((imageUrl, index) => (
@@ -844,6 +886,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                         </Button>
                       ) : null}
                     </div>
+                    {getFieldError(`imageUrls.${index}`) ? <p className="text-sm text-red-600">{getFieldError(`imageUrls.${index}`)}</p> : null}
                     <div className="space-y-2">
                       <FileUpload
                         id={`image-${index}`}
@@ -851,7 +894,10 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                         uploadingLabel="Uploading image..."
                         accept="image/*"
                         maxSizeMb={4}
-                        onUpload={(url) => updateImageUrlAtIndex(index, url)}
+                        onUpload={(url) => {
+                          clearErrors('imageUrls', `imageUrls.${index}`, '_form')
+                          updateImageUrlAtIndex(index, url)
+                        }}
                       />
                       {imageUrl ? (
                         <img
@@ -877,10 +923,11 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                   {form.imageUrls.filter(Boolean).length} of 8 images added.
                 </p>
               </div>
-              {fieldErrors.imageUrls?.[0] ? <p className="text-sm text-red-600">{fieldErrors.imageUrls[0]}</p> : null}
+              {getFieldError('imageUrls') ? <p className="text-sm text-red-600">{getFieldError('imageUrls')}</p> : null}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="videoUrl">Neighbourhood / Tour Video (Optional)</Label>
+                  {getFieldError('videoUrl') ? <p className="text-sm text-red-600">{getFieldError('videoUrl')}</p> : null}
                   <div className="space-y-2">
                     <FileUpload
                       id="videoUrl"
@@ -888,7 +935,10 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                       uploadingLabel="Uploading video..."
                       accept="video/*"
                       maxSizeMb={4}
-                      onUpload={(url) => setForm({ ...form, videoUrl: url })}
+                      onUpload={(url) => {
+                        clearErrors('videoUrl', '_form')
+                        setForm({ ...form, videoUrl: url })
+                      }}
                     />
                     {form.videoUrl ? (
                       <div className="space-y-2">
@@ -908,33 +958,33 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                     ) : null}
                   </div>
                   <p className="text-xs text-slate-500">You can submit the property without a video.</p>
-                  {fieldErrors.videoUrl?.[0] ? <p className="text-sm text-red-600">{fieldErrors.videoUrl[0]}</p> : null}
                 </div>
                 {mode === 'admin' ? (
                   <div className="space-y-2">
                     <Label htmlFor="referenceCode">Reference Code</Label>
-                    <Input id="referenceCode" value={form.referenceCode} onChange={(event) => setForm({ ...form, referenceCode: event.target.value })} />
+                    {getFieldError('referenceCode') ? <p className="text-sm text-red-600">{getFieldError('referenceCode')}</p> : null}
+                    <Input id="referenceCode" className={cn(getFieldError('referenceCode') && 'border-red-500 focus-visible:ring-red-500')} value={form.referenceCode} onChange={(event) => { clearErrors('referenceCode', '_form'); setForm({ ...form, referenceCode: event.target.value }) }} />
                   </div>
                 ) : null}
                 <div className="space-y-2">
                   <Label htmlFor="contactName">Contact Name</Label>
-                  <Input id="contactName" value={form.contactName} onChange={(event) => setForm({ ...form, contactName: event.target.value })} />
-                  {fieldErrors.contactName?.[0] ? <p className="text-sm text-red-600">{fieldErrors.contactName[0]}</p> : null}
+                  {getFieldError('contactName') ? <p className="text-sm text-red-600">{getFieldError('contactName')}</p> : null}
+                  <Input id="contactName" className={cn(getFieldError('contactName') && 'border-red-500 focus-visible:ring-red-500')} value={form.contactName} onChange={(event) => { clearErrors('contactName', '_form'); setForm({ ...form, contactName: event.target.value }) }} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contactPhone">Contact Phone</Label>
-                  <Input id="contactPhone" value={form.contactPhone} onChange={(event) => setForm({ ...form, contactPhone: event.target.value })} />
-                  {fieldErrors.contactPhone?.[0] ? <p className="text-sm text-red-600">{fieldErrors.contactPhone[0]}</p> : null}
+                  {getFieldError('contactPhone') ? <p className="text-sm text-red-600">{getFieldError('contactPhone')}</p> : null}
+                  <Input id="contactPhone" className={cn(getFieldError('contactPhone') && 'border-red-500 focus-visible:ring-red-500')} value={form.contactPhone} onChange={(event) => { clearErrors('contactPhone', '_form'); setForm({ ...form, contactPhone: event.target.value }) }} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contactEmail">Contact Email</Label>
-                  <Input id="contactEmail" type="email" value={form.contactEmail} onChange={(event) => setForm({ ...form, contactEmail: event.target.value })} />
-                  {fieldErrors.contactEmail?.[0] ? <p className="text-sm text-red-600">{fieldErrors.contactEmail[0]}</p> : null}
+                  {getFieldError('contactEmail') ? <p className="text-sm text-red-600">{getFieldError('contactEmail')}</p> : null}
+                  <Input id="contactEmail" className={cn(getFieldError('contactEmail') && 'border-red-500 focus-visible:ring-red-500')} type="email" value={form.contactEmail} onChange={(event) => { clearErrors('contactEmail', '_form'); setForm({ ...form, contactEmail: event.target.value }) }} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="documentInfo">Document Information</Label>
-                  <Input id="documentInfo" value={form.documentInfo} onChange={(event) => setForm({ ...form, documentInfo: event.target.value })} />
-                  {fieldErrors.documentInfo?.[0] ? <p className="text-sm text-red-600">{fieldErrors.documentInfo[0]}</p> : null}
+                  {getFieldError('documentInfo') ? <p className="text-sm text-red-600">{getFieldError('documentInfo')}</p> : null}
+                  <Input id="documentInfo" className={cn(getFieldError('documentInfo') && 'border-red-500 focus-visible:ring-red-500')} value={form.documentInfo} onChange={(event) => { clearErrors('documentInfo', '_form'); setForm({ ...form, documentInfo: event.target.value }) }} />
                 </div>
               </div>
               {mode === 'admin' ? (
@@ -943,13 +993,14 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
                     <p className="font-medium text-gray-900">Disclaimer Accepted</p>
                     <p className="text-sm text-gray-500">Confirm the platform disclaimer before submission.</p>
                   </div>
-                  <Switch checked={form.disclaimerAccepted} onCheckedChange={(checked) => setForm({ ...form, disclaimerAccepted: checked })} />
+                  <Switch checked={form.disclaimerAccepted} onCheckedChange={(checked) => { clearErrors('disclaimerAccepted', '_form'); setForm({ ...form, disclaimerAccepted: checked }) }} />
                 </div>
               ) : (
                 <div className="rounded-lg border bg-slate-50 px-4 py-3 text-sm text-slate-600">
                   The platform disclaimer is applied automatically for dashboard listings.
                 </div>
               )}
+              {getFieldError('disclaimerAccepted') ? <p className="text-sm text-red-600">{getFieldError('disclaimerAccepted')}</p> : null}
             </div>
           ) : null}
 
@@ -992,6 +1043,7 @@ export function PropertyManager({ mode }: { mode: PropertyManagerMode }) {
               Cancel
             </Button>
             <div className="flex gap-2">
+              {formError ? <p className="self-center text-sm text-red-600">{formError}</p> : null}
               {formStep > 0 ? (
                 <Button variant="outline" onClick={() => setFormStep((step) => step - 1)} disabled={saving}>
                   Back

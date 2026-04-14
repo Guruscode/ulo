@@ -18,10 +18,6 @@ const adminUserUpdateSchema = z.object({
   isActive: z.boolean(),
   propertyListingLimit: z.number().int().min(-1).optional().nullable(),
   hotelListingLimit: z.number().int().min(-1).optional().nullable(),
-}).superRefine((data, ctx) => {
-  if (data.accountType !== 'user' && !data.identityNumber?.trim()) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['identityNumber'], message: 'Identity number is required.' })
-  }
 })
 
 function requireAdmin(actor: AuthUser) {
@@ -66,8 +62,8 @@ export async function updateUserForAdmin(actor: AuthUser, id: string, input: unk
     address: parsed.data.address || null,
     state: parsed.data.state || null,
     localGovernment: parsed.data.localGovernment || null,
-    identityType: parsed.data.identityType ?? null,
-    identityNumber: parsed.data.identityNumber || null,
+    identityType: parsed.data.identityType === undefined ? existing.identityType ?? null : parsed.data.identityType ?? null,
+    identityNumber: parsed.data.identityNumber === undefined ? existing.identityNumber ?? null : parsed.data.identityNumber || null,
     propertyListingLimit: parsed.data.propertyListingLimit ?? null,
     hotelListingLimit: parsed.data.hotelListingLimit ?? null,
   })
