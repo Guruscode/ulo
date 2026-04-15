@@ -12,14 +12,15 @@ type FeaturedImageGalleryProps = {
 }
 
 export function FeaturedImageGallery({ images, title, badgeLabel }: FeaturedImageGalleryProps) {
-  const galleryImages = images.slice(0, 4)
+  const galleryImages = images.slice(0, 8)
   const [activeImage, setActiveImage] = useState(galleryImages[0] ?? '')
 
   if (galleryImages.length === 0) {
     return null
   }
 
-  const sideImages = galleryImages.filter((image) => image !== activeImage)
+  const activeIndex = galleryImages.indexOf(activeImage)
+  const sideImages = galleryImages.filter((_, index) => index !== activeIndex)
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">

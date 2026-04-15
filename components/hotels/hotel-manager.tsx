@@ -586,7 +586,7 @@ export function HotelManager({ mode }: { mode: HotelManagerMode }) {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>{editingHotel ? 'Edit Hotel' : 'Create Hotel'}</DialogTitle>
-            <DialogDescription>Complete hotel information, upload 1 to 8 gallery images up to 4 MB each, and manage room inventory.</DialogDescription>
+            <DialogDescription>Complete hotel information, upload 4 to 8 gallery images up to 4 MB each, and manage room inventory.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 md:grid-cols-2">

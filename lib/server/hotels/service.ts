@@ -51,8 +51,8 @@ const hotelSchema = z.object({
   priceValue: z.number().int().positive(),
   images: z
     .array(z.string().trim().url())
-    .min(4, 'Upload exactly 4 images.')
-    .max(4, 'Upload exactly 4 images.'),
+    .min(4, 'Upload at least 4 images.')
+    .max(8, 'Upload no more than 8 images.'),
   amenities: z.array(z.string().trim().min(1)).min(1),
   contactPhone: z.string().trim().min(7),
   contactEmail: z.string().trim().email(),
