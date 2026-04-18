@@ -391,15 +391,16 @@ export async function assertListingCapacity(actor: AuthUser, type: 'property' | 
   if (actor.role === 'admin') return
 
   const { plan, subscription } = await getEffectiveSubscriptionForUser(actor.id)
-  const limit = subscription
-    ? (type === 'property' ? plan.propertyLimit : plan.hotelLimit)
-    : getAdminListingLimit(actor, type)
+  const planLimit = type === 'property' ? plan.propertyLimit : plan.hotelLimit
+  const adminAssignedLimit = getAdminListingLimit(actor, type)
+  const limit = subscription ? planLimit : adminAssignedLimit ?? planLimit
+  const limitSource = subscription || adminAssignedLimit == null ? 'plan' : 'admin'
 
   if (limit != null && limit >= 0 && currentCount >= limit) {
     throw new ApiError(
       403,
       'SUBSCRIPTION_LIMIT_REACHED',
-      subscription
+      limitSource === 'plan'
         ? `Your ${plan.name} plan allows ${limit} ${type === 'property' ? 'property' : 'hotel'} listing${limit === 1 ? '' : 's'}.`
         : `Your admin-assigned access allows ${limit} ${type === 'property' ? 'property' : 'hotel'} listing${limit === 1 ? '' : 's'}.`
     )

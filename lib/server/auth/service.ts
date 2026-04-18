@@ -104,6 +104,8 @@ function toAuthUser(user: UserRecord): AuthUser {
     emailNotifications: user.emailNotifications,
     pushNotifications: user.pushNotifications,
     twoFactorEnabled: user.twoFactorEnabled,
+    propertyListingLimit: user.propertyListingLimit ?? null,
+    hotelListingLimit: user.hotelListingLimit ?? null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   }
