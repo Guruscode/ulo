@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description: 'Discover your dream property with Ulo',
   generator: 'v0.app',
   verification: {
-    google: 'JEK5z-EFkco3BoLJZegYkXZn8Mbfw38igLvPAxU_1Z4',
+    google: 'k7FDpfdrKDVpbGuuQwSQMYl6uYraRvth6eB5GVb9w7U',
   },
   icons: {
     icon: [
