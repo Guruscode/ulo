@@ -1,11 +1,21 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, MapPin, Sparkles, Star } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { HotelGridSkeleton } from '@/components/ui/page-skeletons'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
 import { formatHotelPrice } from '@/lib/hotels/presentation'
 import type { HotelRecord } from '@/lib/hotels/types'
 
@@ -29,17 +39,31 @@ const destinationCopy: Record<string, string> = {
   ibadan: 'Relaxed city hotels with strong value and easy local access.',
 }
 
+const CURATED_STAYS_PAGE_SIZE = 6
+
 export default function HotelExperienceSections({
   hotels,
   loading = false,
 }: HotelExperienceSectionsProps) {
+  const [curatedPage, setCuratedPage] = useState(1)
   const featuredHotels = hotels.filter((hotel) => hotel.featured)
   const hotelsToFeature = (featuredHotels.length > 0 ? featuredHotels : hotels).slice(0, 3)
   const heroHotel = hotelsToFeature[0]
   const secondaryHotels = hotelsToFeature.slice(1, 3)
   const curatedHotels = [...hotels]
     .sort((left, right) => right.rating - left.rating || left.priceValue - right.priceValue)
-    .slice(0, 6)
+
+  const curatedPageCount = Math.max(1, Math.ceil(curatedHotels.length / CURATED_STAYS_PAGE_SIZE))
+  const paginatedCuratedHotels = useMemo(() => {
+    const startIndex = (curatedPage - 1) * CURATED_STAYS_PAGE_SIZE
+    return curatedHotels.slice(startIndex, startIndex + CURATED_STAYS_PAGE_SIZE)
+  }, [curatedHotels, curatedPage])
+
+  useEffect(() => {
+    if (curatedPage > curatedPageCount) {
+      setCuratedPage(curatedPageCount)
+    }
+  }, [curatedPage, curatedPageCount])
 
   const destinations = Object.values(
     hotels.reduce<Record<string, DestinationSummary & { totalRating: number }>>((acc, hotel) => {
@@ -87,9 +111,9 @@ export default function HotelExperienceSections({
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">
               Hotel highlights
             </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+            {/* <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">
               Discover amazing stays across Nigeria's top destinations
-            </h2>
+            </h2> */}
           </div>
 
           <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/70 px-6 py-14 text-center text-slate-600">
@@ -106,12 +130,12 @@ export default function HotelExperienceSections({
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">
+              {/* <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">
                 Hotel highlights
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+              </p> */}
+              {/* <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">
                 Discover amazing stays across Nigeria's top destinations
-              </h2>
+              </h2> */}
               <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
                 Start with high-signal stays, move through destination-led browsing, and then continue into the wider property catalog.
               </p>
@@ -230,9 +254,7 @@ export default function HotelExperienceSections({
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-white/55">
-                Destination edits
-              </p>
+            
               <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
                 Browse hotels through the cities users search first.
               </h2>
@@ -268,11 +290,11 @@ export default function HotelExperienceSections({
                         {destination.hotelsCount} hotels
                       </div>
                     </div>
-                    <p className="text-sm leading-7 text-white/70">{destination.description}</p>
-                    <div className="flex items-center gap-2 text-sm text-white/75">
+                    {/* <p className="text-sm leading-7 text-white/70">{destination.description}</p> */}
+                    {/* <div className="flex items-center gap-2 text-sm text-white/75">
                       <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                       Average rating {destination.rating}
-                    </div>
+                    </div> */}
                   </div>
                 </Card>
               </Link>
@@ -281,19 +303,19 @@ export default function HotelExperienceSections({
         </div>
       </section>
 
-      <section className="bg-white py-16 sm:py-20">
+      <section id="curated-stays" className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">
               Curated stays
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">
-              More hotel options, still presented with restraint.
+              More hotel options, with all stays available here.
             </h2>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {curatedHotels.map((hotel) => (
+            {paginatedCuratedHotels.map((hotel) => (
               <Link key={hotel.id} href={`/hotels/${hotel.id}`}>
                 <Card className="group overflow-hidden rounded-[1.8rem] border-0 bg-[#f8f8f6] shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
                   <div className="relative h-64 overflow-hidden">
@@ -332,6 +354,85 @@ export default function HotelExperienceSections({
               </Link>
             ))}
           </div>
+
+          {curatedPageCount > 1 ? (
+            <div className="mt-10 flex flex-col items-center gap-4">
+              <p className="text-sm text-slate-500">
+                Showing {(curatedPage - 1) * CURATED_STAYS_PAGE_SIZE + 1}
+                {' '}-
+                {' '}
+                {Math.min(curatedPage * CURATED_STAYS_PAGE_SIZE, curatedHotels.length)}
+                {' '}of {curatedHotels.length} hotels
+              </p>
+
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#curated-stays"
+                      className={curatedPage === 1 ? 'pointer-events-none opacity-50' : 'rounded-full'}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        if (curatedPage > 1) {
+                          setCuratedPage(curatedPage - 1)
+                        }
+                      }}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: curatedPageCount }).map((_, index) => {
+                    const pageNumber = index + 1
+                    const shouldRenderPage =
+                      pageNumber === 1 ||
+                      pageNumber === curatedPageCount ||
+                      Math.abs(pageNumber - curatedPage) <= 1
+
+                    if (!shouldRenderPage) {
+                      if (pageNumber === 2 || pageNumber === curatedPageCount - 1) {
+                        return (
+                          <PaginationItem key={`ellipsis-${pageNumber}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )
+                      }
+
+                      return null
+                    }
+
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          href="#curated-stays"
+                          size="default"
+                          isActive={pageNumber === curatedPage}
+                          className="rounded-full px-4"
+                          onClick={(event) => {
+                            event.preventDefault()
+                            setCuratedPage(pageNumber)
+                          }}
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#curated-stays"
+                      className={curatedPage === curatedPageCount ? 'pointer-events-none rounded-full opacity-50' : 'rounded-full'}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        if (curatedPage < curatedPageCount) {
+                          setCuratedPage(curatedPage + 1)
+                        }
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          ) : null}
         </div>
       </section>
     </>
