@@ -100,7 +100,7 @@ export default function HomeNav() {
               className={cn(
                 'relative rounded-full px-5 py-2 text-sm font-medium transition-colors duration-200',
                 useLightNav
-                  ? 'text-white/92 hover:bg-white/8 hover:text-white'
+                  ? 'text-white hover:bg-white/8 hover:text-white'
                   : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950',
               )}
             >
@@ -139,7 +139,7 @@ export default function HomeNav() {
                 href="/signup"
                 className={cn(
                   'text-sm font-medium transition',
-                  useLightNav ? 'text-white/88 hover:text-white' : 'text-slate-600 hover:text-slate-950',
+                  useLightNav ? 'text-white hover:text-white' : 'text-slate-600 hover:text-slate-950',
                 )}
               >
                 Sign up
