@@ -130,15 +130,15 @@ export default function HotelExperienceSections({
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              {/* <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">
-                Hotel highlights
-              </p> */}
+              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">
+                Featured hotels
+              </p>
               {/* <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">
                 Discover amazing stays across Nigeria's top destinations
               </h2> */}
-              <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+              {/* <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
                 Start with high-signal stays, move through destination-led browsing, and then continue into the wider property catalog.
-              </p>
+              </p> */}
             </div>
 
             <Link href="/hotels">
@@ -256,7 +256,7 @@ export default function HotelExperienceSections({
             <div className="max-w-2xl">
             
               <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
-                Browse hotels through the cities users search first.
+                Browse hotels through available cities.
               </h2>
             </div>
             <Link href="/hotels">
@@ -307,7 +307,7 @@ export default function HotelExperienceSections({
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">
-              Curated stays
+              Check out available hotels 
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">
               More hotel options, with all stays available here.
