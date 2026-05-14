@@ -61,11 +61,11 @@ export default function HomeHero({
               </div>
 
               <h1 className="mt-6 max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.06em] text-white sm:text-6xl lg:text-[6.5rem]">
-                Stays that feel premium before you even arrive.
+                Are you looking for a place to stay?
               </h1>
 
               <p className="mt-6 max-w-2xl text-base leading-8 text-white sm:text-lg">
-                Discover refined hotels, boutique stays, and short booking paths across Nigeria with a homepage experience shaped like the reference you shared, but still fully Ulo.
+                Search for hotels and properties across Nigeria's top destinations, all verified for quality and trustworthiness.
               </p>
             </motion.div>
 
