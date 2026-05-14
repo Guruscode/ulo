@@ -40,6 +40,19 @@ export default function RootLayout({
           <CookieBanner />
         </AppProviders>
 
+        {/* Google Tag Manager */}
+        <Script
+          id="gtag-js"
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-DQN4GDYM2C"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-DQN4GDYM2C');`}
+        </Script>
+
         {/* Tawk.to Live Chat */}
         <Script id="tawk-to" strategy="afterInteractive">
           {`

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { MapPin, Search, Star } from 'lucide-react'
 
 import HomeFooter from '@/components/home/home-footer'
@@ -14,7 +15,8 @@ import { HotelGridSkeleton } from '@/components/ui/page-skeletons'
 import { formatHotelPrice } from '@/lib/hotels/presentation'
 
 export default function HotelsPage() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const searchParams = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('location') || '')
   const { hotels, loading } = usePublicHotels()
 
   const filteredHotels = useMemo(() => {

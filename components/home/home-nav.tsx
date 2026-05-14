@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -19,13 +19,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 export default function HomeNav() {
   const [isOpen, setIsOpen] = useState(false)
+  const [hasScrolled, setHasScrolled] = useState(false)
+  const pathname = usePathname()
   const router = useRouter()
   const { isAuthenticated, isLoading, user, logout } = useAuth()
+  const isHomePage = pathname === '/'
+  const useLightNav = !hasScrolled
 
   const navItems = [
     { href: '/', label: 'Home', key: 'home' },
@@ -45,43 +49,75 @@ export default function HomeNav() {
     router.refresh()
   }
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setHasScrolled(window.scrollY > 32)
+    }
+
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 mb-10">
-      {/* Transparent gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-transparent h-20" />
+      <div
+        className={cn(
+          'absolute inset-0 h-24 transition-all duration-300',
+          useLightNav
+            ? 'bg-gradient-to-b from-black/45 via-black/18 to-transparent'
+            : isHomePage
+              ? 'border-b border-slate-200/80 bg-white/92 shadow-sm backdrop-blur-xl'
+              : 'border-b border-slate-200/80 bg-white/92 shadow-sm backdrop-blur-xl',
+        )}
+      />
       
-      <div className="relative max-w-full mx-auto px-6 sm:px-8 lg:px-16 h-20 flex items-center justify-between">
-        {/* Logo */}
+      <div className="relative mx-auto flex h-24 max-w-[1600px] items-center justify-between px-4 sm:px-6 lg:px-10">
         <Link href="/" className="z-10 ml-2 sm:ml-4 lg:ml-6 group">
           <Image
-            src="/brand/logo-white.svg"
+            src={useLightNav ? '/brand/logo-white.svg' : '/brand/logo-navy.svg'}
             alt="ULO"
             width={212}
             height={64}
-            className="h-14 w-auto sm:h-16"
+            className="h-12 w-auto sm:h-14"
             priority
           />
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden lg:flex items-center gap-10 absolute left-1/2 -translate-x-1/2">
+        <div
+          className={cn(
+            'absolute left-1/2 hidden -translate-x-1/2 items-center rounded-full px-4 py-3 backdrop-blur-xl transition-all duration-300 lg:flex',
+            useLightNav
+              ? 'border border-white/18 bg-white/8 shadow-[0_18px_50px_rgba(0,0,0,0.18)]'
+              : 'border border-slate-200 bg-white/90 shadow-[0_16px_40px_rgba(15,23,42,0.08)]',
+          )}
+        >
           {navItems.map(({ href, label, key }) => (
             <Link
               key={key}
               href={href}
-              className="text-white text-sm font-medium hover:text-white/80 transition-colors duration-200 relative group"
+              className={cn(
+                'relative rounded-full px-5 py-2 text-sm font-medium transition-colors duration-200',
+                useLightNav
+                  ? 'text-white/92 hover:bg-white/8 hover:text-white'
+                  : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950',
+              )}
             >
               {label}
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-white group-hover:w-full transition-all duration-300" />
             </Link>
           ))}
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-3 lg:gap-4 z-10">
           {isLoading ? (
             <Button
-              className="bg-white hover:bg-white text-gray-700 text-sm font-semibold px-3 lg:px-4 py-2.5 rounded-lg shadow-lg"
+              className={cn(
+                'rounded-full px-4 py-2.5 text-sm font-semibold backdrop-blur-md',
+                useLightNav
+                  ? 'border border-white/15 bg-white/14 text-white shadow-lg hover:bg-white/18'
+                  : 'border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50',
+              )}
               disabled
             >
               Account
@@ -90,20 +126,61 @@ export default function HomeNav() {
             <AuthenticatedUserMenu
               dashboardHref={user?.role === 'admin' ? '/admin' : '/dashboard'}
               profileHref={user?.role === 'admin' ? '/admin/profile' : '/dashboard/profile'}
-              className="bg-white hover:bg-white/90 text-gray-700 text-sm font-semibold px-3 lg:px-4 py-2.5 rounded-lg transition-all duration-200 shadow-lg"
+              className={cn(
+                'rounded-full px-4 py-2.5 text-sm font-semibold backdrop-blur-md transition-all duration-200',
+                useLightNav
+                  ? 'border border-white/15 bg-white/14 text-white shadow-lg hover:bg-white/20'
+                  : 'border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50',
+              )}
             />
           ) : (
-            <Link href="/login">
-              <Button
-                className="bg-white hover:bg-white/90 text-gray-700 text-sm font-semibold px-5 lg:px-6 py-2.5 rounded-lg transition-all duration-200 shadow-lg"
+            <div className="hidden items-center gap-3 lg:flex">
+              <Link
+                href="/signup"
+                className={cn(
+                  'text-sm font-medium transition',
+                  useLightNav ? 'text-white/88 hover:text-white' : 'text-slate-600 hover:text-slate-950',
+                )}
               >
-                List Properties
-              </Button>
-            </Link>
+                Sign up
+              </Link>
+              <Link href="/login">
+                <Button
+                  className={cn(
+                    'rounded-full px-5 py-2.5 text-sm font-semibold backdrop-blur-md transition-all duration-200',
+                    useLightNav
+                      ? 'border border-white/20 bg-white/18 text-white shadow-lg hover:bg-white/24'
+                      : 'border border-slate-200 bg-slate-950 text-white shadow-sm hover:bg-slate-800',
+                  )}
+                >
+                  List Properties
+                </Button>
+              </Link>
+            </div>
           )}
 
+          {!isAuthenticated && !isLoading ? (
+            <Link href="/login" className="lg:hidden">
+              <Button
+                className={cn(
+                  'rounded-full px-4 py-2.5 text-sm font-semibold backdrop-blur-md transition-all duration-200',
+                  useLightNav
+                    ? 'border border-white/20 bg-white/14 text-white shadow-lg hover:bg-white/20'
+                    : 'border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50',
+                )}
+              >
+                Login
+              </Button>
+            </Link>
+          ) : null}
+
           <button
-            className="lg:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-all duration-200 backdrop-blur-sm"
+            className={cn(
+              'rounded-full p-2 backdrop-blur-sm transition-all duration-200 lg:hidden',
+              useLightNav
+                ? 'border border-white/15 bg-white/10 text-white hover:bg-white/16'
+                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+            )}
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
           >
@@ -133,7 +210,14 @@ export default function HomeNav() {
         )}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-end px-6 py-6">
+          <div className="flex items-center justify-between px-6 py-6">
+            <Image
+              src="/brand/logo-white.svg"
+              alt="ULO"
+              width={140}
+              height={42}
+              className="h-10 w-auto"
+            />
             <button
               className="text-white p-2 hover:bg-white/10 rounded-lg transition-all duration-200"
               onClick={() => setIsOpen(false)}
