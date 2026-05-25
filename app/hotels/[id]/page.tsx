@@ -68,6 +68,17 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
     void loadHotel()
   }, [id])
 
+  const selectedRoom = hotel?.rooms.find((room) => room.id === booking.roomId) ?? null
+  const bookingNights = (() => {
+    if (!booking.checkInDate || !booking.checkOutDate) return 0
+    const checkIn = new Date(`${booking.checkInDate}T00:00:00`)
+    const checkOut = new Date(`${booking.checkOutDate}T00:00:00`)
+    const differenceMs = checkOut.getTime() - checkIn.getTime()
+    if (!Number.isFinite(differenceMs) || differenceMs <= 0) return 0
+    return Math.round(differenceMs / (1000 * 60 * 60 * 24))
+  })()
+  const bookingTotal = selectedRoom ? selectedRoom.priceValue * bookingNights : 0
+
   const resetBookingFlow = () => {
     setBooking(EMPTY_BOOKING)
     setBookingStep('details')
@@ -93,6 +104,14 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
       !booking.checkOutDate
     ) {
       toast.error('Complete your booking details before continuing to payment.')
+      return
+    }
+    if (!selectedRoom) {
+      toast.error('Select a room before continuing to payment.')
+      return
+    }
+    if (bookingNights <= 0) {
+      toast.error('Check-out date must be after check-in date.')
       return
     }
     setBookingStep('payment')
@@ -140,7 +159,7 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
   const buildWhatsAppUrl = () => {
     if (!hotel) return '#'
     const phone = hotel.contactPhone.replace(/\D/g, '')
-    const roomName = hotel.rooms.find((room) => room.id === booking.roomId)?.name || 'selected room'
+    const roomName = selectedRoom?.name || 'selected room'
     const message = [
       `Hello ${hotel.name},`,
       `I have made payment for my booking.`,
@@ -289,8 +308,11 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
                                       <p className="font-semibold text-foreground">Booking summary</p>
                                       <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                                         <p>Guest: {booking.guestName}</p>
-                                        <p>Room: {hotel.rooms.find((room) => room.id === booking.roomId)?.name || 'Selected room'}</p>
+                                        <p>Room: {selectedRoom?.name || 'Selected room'}</p>
                                         <p>Stay: {booking.checkInDate} to {booking.checkOutDate}</p>
+                                        <p>Nights: {bookingNights}</p>
+                                        <p>Rate: {selectedRoom ? `${formatHotelPrice(selectedRoom.priceValue)} / night` : 'Selected room'}</p>
+                                        <p className="pt-2 text-base font-semibold text-foreground">Total to pay: {formatHotelPrice(bookingTotal)}</p>
                                         <p>WhatsApp/Phone: {hotel.contactPhone}</p>
                                       </div>
                                     </Card>
