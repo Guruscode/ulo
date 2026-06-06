@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { listPlansForActor } from '@/lib/server/subscriptions/service'
 
+export const dynamic = 'force-dynamic'
+
 function formatMoney(amount: number) {
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
